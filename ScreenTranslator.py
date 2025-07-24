@@ -9,6 +9,7 @@ import pyperclip # For fallback / convenience
 import os
 import sys
 import threading
+import time  # Import time module for tracking double-press
 
 # --- Ollama / LLM Integration ---
 # List of available models to try (in order of preference)
@@ -27,7 +28,7 @@ def translate_text(text_to_translate: str) -> str:
         return "ไม่มีข้อความที่จะแปล"
 
     # Use a clearer prompt specifically asking for Thai translation
-    prompt = f"""แปลข้อความต่อไปนี้เป็นภาษาไทย):
+    prompt = f"""แปลข้อความต่อไปนี้เป็นภาษาไทย โดยไม่ต้องอธิบายหรือแปลความหมายเพิ่มเติม):
 "{text_to_translate}"
 
 Thai Translation:"""
@@ -104,8 +105,8 @@ def start_screen_selection():
     selection_window.attributes('-alpha', 0.3)
     selection_window.attributes('-topmost', True)
 
-    # Create canvas for drawing selection rectangle
-    canvas = tk.Canvas(selection_window, cursor="cross")
+    # Create canvas for drawing selection rectangle with black background
+    canvas = tk.Canvas(selection_window, cursor="cross", bg="black")
     canvas.pack(fill=tk.BOTH, expand=True)
 
     # Bind mouse events
@@ -116,7 +117,7 @@ def start_screen_selection():
     # Bind escape key to cancel
     selection_window.bind("<Escape>", lambda e: selection_window.destroy())
 
-    # Instructions
+    # Instructions (kept white text for visibility on black background)
     canvas.create_text(
         selection_window.winfo_screenwidth() // 2,
         30,
@@ -129,13 +130,14 @@ def on_selection_start(event):
     global selection_start_x, selection_start_y, selection_rect
     selection_start_x, selection_start_y = event.x, event.y
 
-    # Create initial rectangle with bright blue color
+    # Create initial rectangle
     if selection_rect:
         canvas.delete(selection_rect)
     selection_rect = canvas.create_rectangle(
         selection_start_x, selection_start_y,
         selection_start_x, selection_start_y,
-        outline="#00BFFF",  # Bright blue color
+        fill="white",
+        dash = (4,2),
         width=3  # Slightly thicker line for better visibility
     )
 
@@ -206,19 +208,18 @@ def create_system_tray():
     control_window = tk.Toplevel(root)
     control_window.title("Screen Translator")
     control_window.geometry("300x200")  # Reduced height since we removed a button
-    control_window.protocol("WM_DELETE_WINDOW", lambda: control_window.withdraw())
+    control_window.protocol("WM_DELETE_WINDOW", exit_program)
 
     # Create buttons for main controls
     tk.Label(control_window, text="Screen Translator Controls", font=("Arial", 12, "bold")).pack(pady=10)
 
-    tk.Button(control_window, text="Select Screen Area (Ctrl+Alt+T)",
+    # Update button text to show new hotkey (double Alt)
+    tk.Button(control_window, text="Select Screen Area (Double Alt)",
               command=start_screen_selection).pack(fill="x", padx=20, pady=5)
 
-    tk.Button(control_window, text="Settings (Ctrl+Alt+S)",
+    tk.Button(control_window, text="Settings",
               command=show_settings).pack(fill="x", padx=20, pady=5)
 
-    tk.Button(control_window, text="Exit Program",
-              command=exit_program).pack(fill="x", padx=20, pady=5)
 
     return control_window
 
@@ -235,16 +236,37 @@ def cleanup_and_exit():
     except:
         pass
 
-    # Close any open windows
-    if translation_window and translation_window.winfo_exists():
-        translation_window.destroy()
-    if settings_window and settings_window.winfo_exists():
-        settings_window.destroy()
-    if root and root.winfo_exists():
-        root.destroy()
+    # Set a flag to prevent recursive calls
+    if hasattr(cleanup_and_exit, 'is_exiting'):
+        return
+    cleanup_and_exit.is_exiting = True
+
+    # Close windows safely
+    try:
+        if translation_window:
+            try:
+                translation_window.destroy()
+            except:
+                pass
+
+        if settings_window:
+            try:
+                settings_window.destroy()
+            except:
+                pass
+
+        if root:
+            try:
+                root.quit()  # Use quit instead of destroy to properly end mainloop
+            except:
+                pass
+    except:
+        pass
 
     print("Program Exited.")
-    sys.exit(0)
+
+    # Use os._exit to force exit without raising SystemExit
+    os._exit(0)
 
 def create_translation_overlay():
     global translation_window, translation_label, root
@@ -371,14 +393,29 @@ def update_translation_display(text):
     pyperclip.copy(text) # Also copy to clipboard for convenience
 
 # --- Main Hotkey Handler ---
-def on_hotkey_pressed():
-    print("\n[INFO] Hotkey (Ctrl+Alt+T) pressed! Starting screen selection...")
-    # Make sure we're running in the main thread for Tkinter
-    if threading.current_thread() is not threading.main_thread():
-        print("[INFO] Running hotkey handler in main thread")
-        root.after(0, start_screen_selection)
-    else:
-        start_screen_selection()
+# Variables to track double Alt press
+last_alt_press_time = 0
+ALT_DOUBLE_PRESS_THRESHOLD = 0.5  # seconds
+
+def on_alt_pressed(e):
+    global last_alt_press_time
+
+    # Check if this is a press (not a release)
+    if e.event_type == keyboard.KEY_DOWN and e.name == 'alt':
+        current_time = time.time()
+        time_diff = current_time - last_alt_press_time
+
+        # If pressed within threshold, consider it a double press
+        if 0.1 < time_diff < ALT_DOUBLE_PRESS_THRESHOLD:
+            print("\n[INFO] Double Alt detected! Starting screen selection...")
+            # Run in main thread for Tkinter
+            if threading.current_thread() is not threading.main_thread():
+                root.after(0, start_screen_selection)
+            else:
+                start_screen_selection()
+
+        # Update last press time
+        last_alt_press_time = current_time
 
 def show_settings_hotkey():
     print("[INFO] Settings hotkey pressed")
@@ -389,15 +426,11 @@ def show_settings_hotkey():
             create_translation_overlay()
         show_settings()
 
-# Ensure exit with Ctrl+Alt+Q
-def exit_hotkey_handler():
-    print("[INFO] Exit hotkey (Ctrl+Alt+Q) pressed")
-    cleanup_and_exit()
 
 # --- Program Start ---
 if __name__ == "__main__":
     print("Screen Translator Program Started.")
-    print("Press Ctrl+Alt+T to select screen area.")
+    print("Press Alt twice quickly to select screen area.")
     print("Press Ctrl+Alt+S for settings.")
     print("Press Ctrl+Alt+Q to exit program.")
     print("Press Ctrl+C in terminal to exit.")
@@ -439,9 +472,11 @@ if __name__ == "__main__":
         )
 
     # Register hotkeys
-    keyboard.add_hotkey('ctrl+alt+t', on_hotkey_pressed)
-    keyboard.add_hotkey('ctrl+alt+s', show_settings_hotkey)
-    keyboard.add_hotkey('ctrl+alt+q', exit_hotkey_handler)  # Add exit hotkey
+    # Remove the old Ctrl+Alt+T hotkey
+    # keyboard.add_hotkey('ctrl+alt+t', on_hotkey_pressed)
+
+    # Add listener for Alt key to detect double-press
+    keyboard.on_press(on_alt_pressed)
 
     # Handle Ctrl+C in terminal
     try:
@@ -449,5 +484,10 @@ if __name__ == "__main__":
         root.mainloop()  # Use Tkinter mainloop for proper GUI handling
     except KeyboardInterrupt:
         print("\nProgram interrupted and exiting.")
+    except SystemExit:
+        # Catch SystemExit to avoid the second exception
+        print("Exiting gracefully...")
+    except Exception as e:
+        print(f"Unexpected error: {e}")
     finally:
         cleanup_and_exit()
