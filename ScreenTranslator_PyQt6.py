@@ -55,7 +55,6 @@ class TranslationWorker(QThread):
         self.model = model
 
     def run(self):
-        """Run the translation process in the background"""
         try:
             prompt = f'แปลข้อความต่อไปนี้เป็นภาษาไทย โดยไม่ต้องอธิบายหรือแปลความหมายเพิ่มเติม):\n"{self.text}"\n\nThai Translation:'
 
@@ -275,14 +274,13 @@ class TranslationOverlay(QWidget):
                     stop:1 rgba(30, 30, 46, 0.95));
                 border: 1px solid rgba(137, 180, 250, 0.3);
                 border-radius: 15px;
-                backdrop-filter: blur(10px);
             }
         """)
 
         # Add glow effect
         glow_effect = QGraphicsDropShadowEffect()
-        glow_effect.setBlurRadius(30)
-        glow_effect.setColor(QColor(137, 180, 250, 60))
+        glow_effect.setBlurRadius(20)  # Reduced from 30
+        glow_effect.setColor(QColor(137, 180, 250, 40))  # Reduced opacity
         glow_effect.setOffset(0, 0)
         self.main_frame.setGraphicsEffect(glow_effect)
 
@@ -547,6 +545,7 @@ class TranslationOverlay(QWidget):
                 self.resize_edge = resize_edge
                 self.resize_start_position = event.globalPosition().toPoint()
                 self.resize_start_geometry = self.geometry()
+                # Don't change cursor during resize
                 return
 
             # Check if click is on header frame for dragging
@@ -554,36 +553,8 @@ class TranslationOverlay(QWidget):
             if header_rect.contains(click_pos):
                 self.is_dragging = True
                 self.drag_start_position = event.globalPosition().toPoint() - self.pos()
-
-    def get_resize_edge(self, pos):
-        """Determine which edge/corner is being clicked for resizing"""
-        rect = self.rect()
-        margin = self.resize_margin
-
-        # Check edges and corners
-        left = pos.x() <= margin
-        right = pos.x() >= rect.width() - margin
-        top = pos.y() <= margin
-        bottom = pos.y() >= rect.height() - margin
-
-        # Determine resize type
-        if left and top:
-            return "top-left"
-        elif right and top:
-            return "top-right"
-        elif left and bottom:
-            return "bottom-left"
-        elif right and bottom:
-            return "bottom-right"
-        elif left:
-            return "left"
-        elif right:
-            return "right"
-        elif top:
-            return "top"
-        elif bottom:
-            return "bottom"
-        return None
+                # Don't change cursor during drag
+                # self.setCursor(QCursor(Qt.CursorShape.ClosedHandCursor))
 
     def mouseMoveEvent(self, event):
         """Handle mouse move for dragging and resizing"""
@@ -592,6 +563,10 @@ class TranslationOverlay(QWidget):
         elif self.is_dragging and self.drag_start_position is not None:
             new_pos = event.globalPosition().toPoint() - self.drag_start_position
             self.move(new_pos)
+        # Remove cursor updates during mouse move
+        # else:
+        #     # Update cursor based on position
+        #     self.update_cursor_for_resize(event.position().toPoint())
 
     def mouseReleaseEvent(self, event):
         """Handle mouse release"""
@@ -603,6 +578,116 @@ class TranslationOverlay(QWidget):
             self.resize_start_geometry = None
             self.resize_edge = None
 
+            # Don't update cursor after release
+            # self.update_cursor_for_resize(event.position().toPoint())
+
+    def get_resize_edge(self, pos):
+        """Determine which edge/corner is being clicked for resizing"""
+        rect = self.rect()
+        margin = self.resize_margin
+
+        # Check corners first (they take priority over edges)
+        if pos.x() <= margin and pos.y() <= margin:
+            return "top-left"
+        elif pos.x() >= rect.width() - margin and pos.y() <= margin:
+            return "top-right"
+        elif pos.x() <= margin and pos.y() >= rect.height() - margin:
+            return "bottom-left"
+        elif pos.x() >= rect.width() - margin and pos.y() >= rect.height() - margin:
+            return "bottom-right"
+        # Check edges
+        elif pos.y() <= margin:
+            return "top"
+        elif pos.y() >= rect.height() - margin:
+            return "bottom"
+        elif pos.x() <= margin:
+            return "left"
+        elif pos.x() >= rect.width() - margin:
+            return "right"
+
+        return None
+
+    def perform_resize(self, global_pos):
+        """Perform the actual resizing based on the edge being dragged"""
+        if not self.is_resizing or not self.resize_edge:
+            return
+
+        # Calculate the difference from start position
+        diff = global_pos - self.resize_start_position
+        original_geometry = self.resize_start_geometry
+
+        new_x = original_geometry.x()
+        new_y = original_geometry.y()
+        new_width = original_geometry.width()
+        new_height = original_geometry.height()
+
+        # Apply resize based on edge
+        if "left" in self.resize_edge:
+            new_x = original_geometry.x() + diff.x()
+            new_width = original_geometry.width() - diff.x()
+        elif "right" in self.resize_edge:
+            new_width = original_geometry.width() + diff.x()
+
+        if "top" in self.resize_edge:
+            new_y = original_geometry.y() + diff.y()
+            new_height = original_geometry.height() - diff.y()
+        elif "bottom" in self.resize_edge:
+            new_height = original_geometry.height() + diff.y()
+
+        # Calculate fixed heights for header and footer
+        header_height = self.header_frame.height() + 15  # Include spacing
+        footer_height = 60  # Approximate footer height with spacing
+        fixed_height = header_height + footer_height + 40  # Add margins
+
+        # Set minimum and maximum constraints
+        min_width = 300
+        min_text_height = 60  # Minimum height for text area
+        max_text_height = 600  # Maximum height for text area
+        min_height = fixed_height + min_text_height
+        max_height = fixed_height + max_text_height
+
+        # Apply width constraints
+        if new_width < min_width:
+            if "left" in self.resize_edge:
+                new_x = new_x - (min_width - new_width)
+            new_width = min_width
+
+        # Apply height constraints
+        if new_height < min_height:
+            if "top" in self.resize_edge:
+                new_y = new_y - (min_height - new_height)
+            new_height = min_height
+        elif new_height > max_height:
+            if "top" in self.resize_edge:
+                new_y = new_y + (new_height - max_height)
+            new_height = max_height
+
+        # Apply the new geometry
+        self.setGeometry(new_x, new_y, new_width, new_height)
+
+        # Update the text area height based on new window size
+        self.update_text_area_height()
+
+    def update_text_area_height(self):
+        """Update the height of the text area based on the current window size"""
+        # Calculate available height for text area
+        total_height = self.height()
+        header_height = self.header_frame.height() + 15  # Include spacing
+        footer_height = 60  # Footer height with spacing
+        margins = 40  # Total margins
+
+        # Calculate new text area height
+        available_height = total_height - header_height - footer_height - margins
+
+        # Ensure it stays within reasonable bounds
+        text_height = max(60, min(available_height, 600))
+
+        # Update the text area size
+        self.translation_text.setMinimumHeight(text_height)
+        self.translation_text.setMaximumHeight(text_height)
+
+        # Force layout update
+        self.main_frame.layout().update()
 
     # Comment out the cursor update method to disable cursor changes
     # def update_cursor_for_resize(self, pos):
