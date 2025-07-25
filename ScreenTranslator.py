@@ -184,7 +184,15 @@ class ScreenTranslatorApp:
         sizegrip.bind("<ButtonRelease-1>", self._stop_resize)
         sizegrip.bind("<B1-Motion>", self._on_resize)
 
+        # Store references for smoother resizing
+        self.main_frame = main_frame
+        self.sizegrip = sizegrip
+
         self.translation_window.focus_set()
+
+        # Add variable to control resize update frequency
+        self.last_resize_update = 0
+        self.resize_interval = 1/30  # 30 FPS
 
     def _start_drag(self, event):
         """Begins drag operation for overlay window"""
@@ -209,22 +217,55 @@ class ScreenTranslatorApp:
         """Begins resize operation"""
         self.drag_data["x"] = event.x
         self.drag_data["y"] = event.y
+        self.resize_start_width = self.overlay_width
+        self.resize_start_height = self.overlay_height
+        self.resize_start_pos_x = self.translation_window.winfo_x()
+        self.resize_start_pos_y = self.translation_window.winfo_y()
+
+        # Create resize ghost window for smooth feedback
+        self.resize_ghost = tk.Toplevel(self.root)
+        self.resize_ghost.overrideredirect(True)
+        self.resize_ghost.attributes('-alpha', 0.3, '-topmost', True)
+        self.resize_ghost.geometry(f"{self.overlay_width}x{self.overlay_height}+{self.resize_start_pos_x}+{self.resize_start_pos_y}")
+        self.resize_ghost.config(bg="white")
 
     def _on_resize(self, event):
-        """Handles resizing of the overlay window"""
-        width = max(300, self.overlay_width + (event.x - self.drag_data["x"]))
-        height = max(150, self.overlay_height + (event.y - self.drag_data["y"]))
-        self.translation_window.geometry(f"{width}x{height}")
-        # Store size for future window creations
-        self.overlay_width = width
-        self.overlay_height = height
-        self.drag_data["x"] = event.x
-        self.drag_data["y"] = event.y
+        """Handles resizing of the overlay window with smoothing"""
+        current_time = time.time()
+
+        # Calculate the new dimensions based on drag distance
+        width = max(300, self.resize_start_width + (event.x - self.drag_data["x"]))
+        height = max(150, self.resize_start_height + (event.y - self.drag_data["y"]))
+
+        # Update the ghost window for visual feedback at a higher rate
+        self.resize_ghost.geometry(f"{width}x{height}+{self.resize_start_pos_x}+{self.resize_start_pos_y}")
+
+        # Throttle actual window updates for smoothness
+        if current_time - self.last_resize_update >= self.resize_interval:
+            # Store new dimensions for when we finish resizing
+            self.overlay_width = width
+            self.overlay_height = height
+            self.last_resize_update = current_time
 
     def _stop_resize(self, event):
-        """Ends resize operation"""
+        """Ends resize operation and applies the final size"""
+        # Destroy the ghost window
+        if hasattr(self, 'resize_ghost') and self.resize_ghost:
+            self.resize_ghost.destroy()
+
+        # Apply the final size to the actual window
+        self.translation_window.geometry(f"{self.overlay_width}x{self.overlay_height}+{self.translation_window.winfo_x()}+{self.translation_window.winfo_y()}")
+
+        # Reset drag data
         self.drag_data["x"] = 0
         self.drag_data["y"] = 0
+
+        # Clean up temporary variables
+        if hasattr(self, 'resize_start_width'):
+            del self.resize_start_width
+            del self.resize_start_height
+            del self.resize_start_pos_x
+            del self.resize_start_pos_y
 
     def _update_translation_display(self, text):
         """Updates the text in the translation overlay window."""
