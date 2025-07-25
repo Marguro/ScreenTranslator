@@ -592,17 +592,8 @@ class TranslationOverlay(QWidget):
         rect = self.rect()
         margin = self.resize_margin
 
-        # Check corners first (they take priority over edges)
-        if pos.x() <= margin and pos.y() <= margin:
-            return "top-left"
-        elif pos.x() >= rect.width() - margin and pos.y() <= margin:
-            return "top-right"
-        elif pos.x() <= margin and pos.y() >= rect.height() - margin:
-            return "bottom-left"
-        elif pos.x() >= rect.width() - margin and pos.y() >= rect.height() - margin:
-            return "bottom-right"
-        # Check edges
-        elif pos.y() <= margin:
+        # Allow all edges for resizing but no corners
+        if pos.y() <= margin:
             return "top"
         elif pos.y() >= rect.height() - margin:
             return "bottom"
@@ -627,7 +618,7 @@ class TranslationOverlay(QWidget):
         new_width = original_geometry.width()
         new_height = original_geometry.height()
 
-        # Apply resize based on edge
+        # Apply resize based on edge - รองรับทั้ง 4 ขอบ
         if "left" in self.resize_edge:
             new_x = original_geometry.x() + diff.x()
             new_width = original_geometry.width() - diff.x()
@@ -640,11 +631,9 @@ class TranslationOverlay(QWidget):
         elif "bottom" in self.resize_edge:
             new_height = original_geometry.height() + diff.y()
 
-        # Set minimum size to match default overlay size (500x200)
+        # Set minimum and maximum constraints
         min_width = 500
-        min_height = 200
-
-        # Set maximum constraints for reasonable usage
+        min_height = 150
         max_width = 1200
         max_height = 800
 
@@ -675,8 +664,9 @@ class TranslationOverlay(QWidget):
         # Apply the new geometry
         self.setGeometry(new_x, new_y, new_width, new_height)
 
-        # Update the text area height based on new window size
-        self.update_text_area_height()
+        # Update text area height when resizing vertically
+        if "top" in self.resize_edge or "bottom" in self.resize_edge:
+            self.update_text_area_height()
 
     def update_text_area_height(self):
         """Update the height of the text area based on the current window size"""
@@ -932,6 +922,7 @@ class SettingsDialog(QDialog):
 
     def get_selected_model(self):
         return self.model_combo.currentText()
+
 
 class ControlWindow(QMainWindow):
     """Main control window"""
@@ -1243,6 +1234,7 @@ class ControlWindow(QMainWindow):
 
         event.accept()
 
+
 class ScreenTranslatorApp:
     """Main application class"""
 
@@ -1300,6 +1292,7 @@ class ScreenTranslatorApp:
 
         self.main_window.show()
         return self.app.exec()
+
 
 if __name__ == "__main__":
     app = ScreenTranslatorApp()

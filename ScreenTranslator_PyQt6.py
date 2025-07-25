@@ -651,29 +651,31 @@ class TranslationOverlay(QWidget):
         max_width = 1200
         max_height = 800
 
-        # Apply width constraints
-        if new_width < min_width:
-            if "left" in self.resize_edge:
-                new_x = new_x - (min_width - new_width)
-            new_width = min_width
-        elif new_width > max_width:
-            if "right" in self.resize_edge:
-                new_width = max_width
-            else:  # left resize
-                new_x = new_x + (new_width - max_width)
-                new_width = max_width
+        # Apply width constraints ONLY when resizing horizontally
+        if "left" in self.resize_edge or "right" in self.resize_edge:
+            if new_width < min_width:
+                if "left" in self.resize_edge:
+                    new_x = new_x - (min_width - new_width)
+                new_width = min_width
+            elif new_width > max_width:
+                if "right" in self.resize_edge:
+                    new_width = max_width
+                else:  # left resize
+                    new_x = new_x + (new_width - max_width)
+                    new_width = max_width
 
-        # Apply height constraints
-        if new_height < min_height:
-            if "top" in self.resize_edge:
-                new_y = new_y - (min_height - new_height)
-            new_height = min_height
-        elif new_height > max_height:
-            if "bottom" in self.resize_edge:
-                new_height = max_height
-            else:  # top resize
-                new_y = new_y + (new_height - max_height)
-                new_height = max_height
+        # Apply height constraints ONLY when resizing vertically
+        if "top" in self.resize_edge or "bottom" in self.resize_edge:
+            if new_height < min_height:
+                if "top" in self.resize_edge:
+                    new_y = new_y - (min_height - new_height)
+                new_height = min_height
+            elif new_height > max_height:
+                if "bottom" in self.resize_edge:
+                    new_height = max_height
+                else:  # top resize
+                    new_y = new_y + (new_height - max_height)
+                    new_height = max_height
 
         # Apply the new geometry
         self.setGeometry(new_x, new_y, new_width, new_height)
