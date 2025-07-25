@@ -17,7 +17,32 @@ from PyQt6.QtWidgets import QGraphicsDropShadowEffect
 
 # --- Constants and Configuration ---
 TESSERACT_PATH = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
-AVAILABLE_MODELS = ["gemma3n"]
+
+# Model mapping: Display Name -> Actual Model Name
+AVAILABLE_MODELS = {
+    "Gemma 3n (Unsloth)": "hf.co/unsloth/gemma-3n-E4B-it-GGUF:Q4_K_XL",
+    "Gemma 3n": "gemma3n"
+}
+
+# Model-specific configurations
+def get_model_options(model_name):
+    """Get specific options for each model"""
+    # Unsloth recommended settings
+    if "unsloth" in model_name.lower() or "hf.co/unsloth" in model_name:
+        return {
+            'temperature': 1.0,
+            'top_k': 64,
+            'top_p': 0.95,
+            'min_p': 0.0,
+            'num_predict': 200
+        }
+    # Default settings for other models
+    else:
+        return {
+            'temperature': 0.1,
+            'num_predict': 200
+        }
+
 ALT_DOUBLE_PRESS_THRESHOLD = 0.5  # seconds
 
 class TranslationWorker(QThread):
@@ -32,11 +57,16 @@ class TranslationWorker(QThread):
     def run(self):
         try:
             prompt = f'แปลข้อความต่อไปนี้เป็นภาษาไทย โดยไม่ต้องอธิบายหรือแปลความหมายเพิ่มเติม):\n"{self.text}"\n\nThai Translation:'
+
+            # Get model-specific options
+            model_options = get_model_options(self.model)
+
             response = ollama.generate(
                 model=self.model,
                 prompt=prompt,
-                options={'temperature': 0.1, 'num_predict': 200}
+                options=model_options
             )
+
             translated_text = response['response'].strip()
             if not any('\u0e00' <= char <= '\u0e7f' for char in translated_text):
                 result = f"Translation Error: ตัวอักษรไม่ถูกต้อง\n\nOriginal response: {translated_text}"
@@ -209,7 +239,7 @@ class ScreenSelector(QWidget):
         self.setGeometry(total_rect)
 
 class TranslationOverlay(QWidget):
-    """Resizable floating translation window"""
+    """Modern floating translation window"""
 
     def __init__(self):
         super().__init__()
@@ -217,39 +247,43 @@ class TranslationOverlay(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
 
         # Window properties
-        self.resize(600, 300)
+        self.resize(500, 200)
         screen = QApplication.primaryScreen().geometry()
-        self.move(screen.width() - 700, 100)  # Position near right edge of screen
+        self.move(screen.width() - 520, 50)  # Position near top-right corner
 
-        # Enable mouse tracking for resize areas
-        self.setMouseTracking(True)
-        #self.setAttribute(Qt.WA_TranslucentBackground)
-
-        # Drag and resize variables
+        # Drag variables
         self.drag_start_position = None
-        self.resize_mode = None
-        self.resize_margin = 8
-        self.resize_ghost = None  # For smooth resize visual feedback
+        self.is_dragging = False
+
+        # Resize variables
+        self.resize_start_position = None
+        self.resize_start_geometry = None
+        self.is_resizing = False
+        self.resize_edge = None
+        self.resize_margin = 8  # Resize detection margin
 
         self.setup_ui()
 
     def setup_ui(self):
-        # Main container with rounded corners and shadow
+        # Main container with modern glassmorphism design
         self.main_frame = QFrame(self)
         self.main_frame.setStyleSheet("""
             QFrame {
-                background-color: #1e1e2e;
-                border: 2px solid #45475a;
-                border-radius: 10px;
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1, 
+                    stop:0 rgba(45, 45, 68, 0.95), 
+                    stop:1 rgba(30, 30, 46, 0.95));
+                border: 1px solid rgba(137, 180, 250, 0.3);
+                border-radius: 15px;
+                backdrop-filter: blur(10px);
             }
         """)
 
-        # Add shadow effect
-        shadow = QGraphicsDropShadowEffect()
-        shadow.setBlurRadius(20)
-        shadow.setColor(QColor(0, 0, 0, 100))
-        shadow.setOffset(0, 5)
-        self.main_frame.setGraphicsEffect(shadow)
+        # Add glow effect
+        glow_effect = QGraphicsDropShadowEffect()
+        glow_effect.setBlurRadius(30)
+        glow_effect.setColor(QColor(137, 180, 250, 60))
+        glow_effect.setOffset(0, 0)
+        self.main_frame.setGraphicsEffect(glow_effect)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -257,267 +291,384 @@ class TranslationOverlay(QWidget):
 
         # Inner layout
         inner_layout = QVBoxLayout(self.main_frame)
-        inner_layout.setContentsMargins(8, 8, 8, 8)
-        inner_layout.setSpacing(0)
+        inner_layout.setContentsMargins(20, 15, 20, 15)
+        inner_layout.setSpacing(12)
 
-        # Header
+        # Header with title and close button
         self.setup_header(inner_layout)
 
         # Content area
-        self.translation_text = QTextEdit()
-        self.translation_text.setStyleSheet("""
-            QTextEdit {
-                background-color: #313244;
-                color: #cdd6f4;
-                font: 14px 'Segoe UI';
-                border: none;
-                border-radius: 5px;
-                padding: 15px;
-            }
-        """)
-        self.translation_text.setReadOnly(True)
-        inner_layout.addWidget(self.translation_text)
+        self.setup_content(inner_layout)
 
-        # Footer
+        # Footer with status
         self.setup_footer(inner_layout)
 
     def setup_header(self, layout):
-        header = QFrame()
-        header.setStyleSheet("""
+        # Create draggable header
+        self.header_frame = QFrame()
+        self.header_frame.setStyleSheet("""
             QFrame {
-                background-color: #313244;
-                border-radius: 5px;
-                max-height: 40px;
-                min-height: 40px;
+                background: transparent;
+                border: none;
             }
         """)
+        self.header_frame.setCursor(QCursor(Qt.CursorShape.SizeAllCursor))
 
-        header_layout = QHBoxLayout(header)
-        header_layout.setContentsMargins(10, 0, 10, 0)
+        header_layout = QHBoxLayout(self.header_frame)
+        header_layout.setSpacing(10)
+        header_layout.setContentsMargins(0, 0, 0, 0)
 
-        # Drag handle
-        drag_label = QLabel("⋮⋮")
-        drag_label.setStyleSheet("""
+        # Icon and title
+        icon_title_layout = QHBoxLayout()
+        icon_title_layout.setSpacing(8)
+
+        # Translation icon
+        icon_label = QLabel("🌐")
+        icon_label.setStyleSheet("""
             QLabel {
-                color: #cdd6f4;
-                font: bold 16px 'Segoe UI';
-                padding: 8px;
+                font-size: 18px;
+                color: #89b4fa;
+                background: transparent;
+                border: none;
+                padding: 0px;
             }
         """)
-        header_layout.addWidget(drag_label)
 
         # Title
-        title = QLabel("🌐 Translation")
+        title = QLabel("Translation")
         title.setStyleSheet("""
             QLabel {
-                color: #89b4fa;
-                font: bold 13px 'Segoe UI';
-                padding: 8px;
+                color: #cdd6f4;
+                font: bold 14px 'Segoe UI';
+                background: transparent;
+                border: none;
+                margin: 0px;
+                padding: 0px;
             }
         """)
-        header_layout.addWidget(title)
+
+        # Drag hint
+        drag_hint = QLabel("• • •")
+        drag_hint.setStyleSheet("""
+            QLabel {
+                color: rgba(205, 214, 244, 0.5);
+                font: bold 12px 'Segoe UI';
+                background: transparent;
+                border: none;
+                padding: 0px 5px;
+            }
+        """)
+
+        icon_title_layout.addWidget(icon_label)
+        icon_title_layout.addWidget(title)
+        icon_title_layout.addWidget(drag_hint)
+
+        header_layout.addLayout(icon_title_layout)
         header_layout.addStretch()
 
-        # Control buttons
-        settings_btn = QPushButton("⚙")
-        settings_btn.setStyleSheet(self.get_button_style("#fab387"))
-        settings_btn.setFixedSize(30, 30)
-        settings_btn.clicked.connect(self.show_settings)
-
+        # Close button
         close_btn = QPushButton("✕")
-        close_btn.setStyleSheet(self.get_button_style("#f38ba8"))
-        close_btn.setFixedSize(30, 30)
-        close_btn.clicked.connect(self.close)
-
-        header_layout.addWidget(settings_btn)
-        header_layout.addWidget(close_btn)
-
-        layout.addWidget(header)
-
-    def setup_footer(self, layout):
-        footer = QFrame()
-        footer.setStyleSheet("""
-            QFrame {
-                background-color: #1e1e2e;
-                max-height: 30px;
-                min-height: 30px;
+        close_btn.setStyleSheet("""
+            QPushButton {
+                background: rgba(243, 139, 168, 0.1);
+                color: #f38ba8;
+                border: 1px solid rgba(243, 139, 168, 0.3);
+                border-radius: 12px;
+                font: bold 12px 'Segoe UI';
+                padding: 4px;
+                min-width: 24px;
+                max-width: 24px;
+                min-height: 24px;
+                max-height: 24px;
+            }
+            QPushButton:hover {
+                background: rgba(243, 139, 168, 0.2);
+                border: 1px solid rgba(243, 139, 168, 0.5);
+            }
+            QPushButton:pressed {
+                background: rgba(243, 139, 168, 0.3);
             }
         """)
+        close_btn.clicked.connect(self.close)
 
-        footer_layout = QHBoxLayout(footer)
-        footer_layout.setContentsMargins(12, 4, 12, 4)
+        header_layout.addWidget(close_btn)
+        layout.addWidget(self.header_frame)
 
+    def setup_content(self, layout):
+        # Translation text area
+        self.translation_text = QTextEdit()
+        self.translation_text.setStyleSheet("""
+            QTextEdit {
+                background: rgba(49, 50, 68, 0.6);
+                color: #cdd6f4;
+                font: 13px 'Segoe UI';
+                border: 1px solid rgba(137, 180, 250, 0.2);
+                border-radius: 10px;
+                padding: 12px;
+                selection-background-color: #89b4fa;
+                selection-color: #1e1e2e;
+            }
+            QTextEdit:focus {
+                border: 1px solid rgba(137, 180, 250, 0.4);
+            }
+            QScrollBar:vertical {
+                background: rgba(69, 71, 90, 0.5);
+                width: 8px;
+                border-radius: 4px;
+                margin: 0px;
+            }
+            QScrollBar::handle:vertical {
+                background: rgba(137, 180, 250, 0.6);
+                border-radius: 4px;
+                min-height: 20px;
+            }
+            QScrollBar::handle:vertical:hover {
+                background: rgba(137, 180, 250, 0.8);
+            }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                height: 0px;
+            }
+        """)
+        self.translation_text.setReadOnly(True)
+        self.translation_text.setMinimumHeight(80)
+        self.translation_text.setMaximumHeight(120)
+
+        layout.addWidget(self.translation_text)
+
+    def setup_footer(self, layout):
+        footer_layout = QHBoxLayout()
+        footer_layout.setSpacing(10)
+
+        # Status indicator
         self.status_label = QLabel("Ready")
         self.status_label.setStyleSheet("""
             QLabel {
-                color: #6c7086;
+                color: #a6e3a1;
                 font: 11px 'Segoe UI';
+                background: rgba(166, 227, 161, 0.1);
+                border: 1px solid rgba(166, 227, 161, 0.3);
+                border-radius: 8px;
+                padding: 4px 8px;
             }
         """)
 
         footer_layout.addWidget(self.status_label)
         footer_layout.addStretch()
 
-        layout.addWidget(footer)
+        # Copy indicator (shows when text is copied)
+        self.copy_indicator = QLabel("📋 Copied!")
+        self.copy_indicator.setStyleSheet("""
+            QLabel {
+                color: #89b4fa;
+                font: 11px 'Segoe UI';
+                background: rgba(137, 180, 250, 0.1);
+                border: 1px solid rgba(137, 180, 250, 0.3);
+                border-radius: 8px;
+                padding: 4px 8px;
+            }
+        """)
+        self.copy_indicator.hide()
 
-    def get_button_style(self, color):
-        return f"""
-            QPushButton {{
-                background-color: #313244;
-                color: #cdd6f4;
-                border: none;
-                border-radius: 3px;
-                font: bold 13px 'Segoe UI';
-            }}
-            QPushButton:hover {{
-                background-color: {color};
-                color: white;
-            }}
-        """
-
-    def show_settings(self):
-        # Emit signal to parent to show settings
-        if hasattr(self.parent(), 'show_settings'):
-            self.parent().show_settings()
+        footer_layout.addWidget(self.copy_indicator)
+        layout.addLayout(footer_layout)
 
     def update_text(self, text):
+        """Update translation text and copy to clipboard"""
         self.translation_text.setPlainText(text)
         pyperclip.copy(text)
 
-    def update_status(self, status):
+        # Show copy indicator briefly
+        self.copy_indicator.show()
+        QTimer.singleShot(2000, self.copy_indicator.hide)
+
+        # Update status based on content
+        if text.startswith("กำลัง"):
+            self.update_status("Processing...", "#fab387")
+        elif text.startswith("Translation Error"):
+            self.update_status("Error", "#f38ba8")
+        else:
+            self.update_status("Completed", "#a6e3a1")
+
+    def update_status(self, status, color="#a6e3a1"):
+        """Update status with color"""
         self.status_label.setText(status)
-        if "Resized" in status:
-            QTimer.singleShot(2000, lambda: self.status_label.setText("Ready"))
+        self.status_label.setStyleSheet(f"""
+            QLabel {{
+                color: {color};
+                font: 11px 'Segoe UI';
+                background: rgba({self.hex_to_rgba(color, 0.1)});
+                border: 1px solid rgba({self.hex_to_rgba(color, 0.3)});
+                border-radius: 8px;
+                padding: 4px 8px;
+            }}
+        """)
 
-    # Mouse events for dragging and resizing
+    def hex_to_rgba(self, hex_color, alpha):
+        """Convert hex color to rgba string"""
+        hex_color = hex_color.lstrip('#')
+        rgb = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+        return f"{rgb[0]}, {rgb[1]}, {rgb[2]}, {alpha}"
+
+    def showEvent(self, event):
+        """Animate entrance"""
+        super().showEvent(event)
+
+        # Fade in animation
+        self.setWindowOpacity(0)
+        self.fade_animation = QTimer()
+        self.fade_animation.timeout.connect(self.fade_in)
+        self.fade_animation.start(16)  # ~60 FPS
+        self.fade_value = 0
+
+    def fade_in(self):
+        """Smooth fade in effect"""
+        self.fade_value += 0.1
+        if self.fade_value >= 1.0:
+            self.fade_value = 1.0
+            self.fade_animation.stop()
+        self.setWindowOpacity(self.fade_value)
+
+    def closeEvent(self, event):
+        """Animate exit"""
+        if hasattr(self, 'fade_animation'):
+            self.fade_animation.stop()
+        event.accept()
+
     def mousePressEvent(self, event):
+        """Handle mouse press for dragging and resizing"""
         if event.button() == Qt.MouseButton.LeftButton:
-            self.drag_start_position = event.globalPosition().toPoint()
+            click_pos = event.position().toPoint()
 
-            # Check if we're in a resize area
-            pos = event.position().toPoint()
-            self.resize_mode = self.get_resize_mode(pos)
+            # Check for resize edge first
+            resize_edge = self.get_resize_edge(click_pos)
+            if resize_edge:
+                self.is_resizing = True
+                self.resize_edge = resize_edge
+                self.resize_start_position = event.globalPosition().toPoint()
+                self.resize_start_geometry = self.geometry()
+                return
+
+            # Check if click is on header frame for dragging
+            header_rect = self.header_frame.geometry()
+            if header_rect.contains(click_pos):
+                self.is_dragging = True
+                self.drag_start_position = event.globalPosition().toPoint() - self.pos()
+                self.setCursor(QCursor(Qt.CursorShape.ClosedHandCursor))
 
     def mouseMoveEvent(self, event):
-        pos = event.position().toPoint()
-
-        if event.buttons() == Qt.MouseButton.LeftButton and self.drag_start_position:
-            if self.resize_mode:
-                self.handle_resize(event.globalPosition().toPoint())
-            else:
-                # Dragging
-                diff = event.globalPosition().toPoint() - self.drag_start_position
-                new_pos = self.pos() + diff
-                self.move(new_pos)
-                self.drag_start_position = event.globalPosition().toPoint()
+        """Handle mouse move for dragging, resizing, and cursor updates"""
+        if self.is_resizing:
+            self.perform_resize(event.globalPosition().toPoint())
+        elif self.is_dragging and self.drag_start_position is not None:
+            new_pos = event.globalPosition().toPoint() - self.drag_start_position
+            self.move(new_pos)
         else:
             # Update cursor based on position
-            self.update_cursor(pos)
+            self.update_cursor_for_resize(event.position().toPoint())
 
     def mouseReleaseEvent(self, event):
-        # Apply final size when mouse released and clean up ghost
-        if self.resize_mode and self.resize_ghost:
-            # Get final size from ghost
-            final_size = self.resize_ghost.size()
-            self.resize(final_size.width(), final_size.height())
+        """Handle mouse release"""
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.is_dragging = False
+            self.is_resizing = False
+            self.drag_start_position = None
+            self.resize_start_position = None
+            self.resize_start_geometry = None
+            self.resize_edge = None
 
-            # Clean up ghost
-            self.resize_ghost.close()
-            self.resize_ghost.deleteLater()
-            self.resize_ghost = None
+            # Update cursor for current position
+            self.update_cursor_for_resize(event.position().toPoint())
 
-            self.update_status(f"Resized to {final_size.width()}x{final_size.height()}")
-
-        self.drag_start_position = None
-        self.resize_mode = None
-
-    def get_resize_mode(self, pos):
-        """Determine resize mode based on mouse position"""
+    def get_resize_edge(self, pos):
+        """Determine which edge/corner is being clicked for resizing"""
         rect = self.rect()
         margin = self.resize_margin
 
-        right_edge = pos.x() >= rect.width() - margin
-        bottom_edge = pos.y() >= rect.height() - margin
+        # Check edges and corners
+        left = pos.x() <= margin
+        right = pos.x() >= rect.width() - margin
+        top = pos.y() <= margin
+        bottom = pos.y() >= rect.height() - margin
 
-        if right_edge and bottom_edge:
-            return "corner"
-        elif right_edge:
+        # Determine resize type
+        if left and top:
+            return "top-left"
+        elif right and top:
+            return "top-right"
+        elif left and bottom:
+            return "bottom-left"
+        elif right and bottom:
+            return "bottom-right"
+        elif left:
+            return "left"
+        elif right:
             return "right"
-        elif bottom_edge:
+        elif top:
+            return "top"
+        elif bottom:
             return "bottom"
         return None
 
-    def update_cursor(self, pos):
-        """Update cursor based on mouse position"""
-        mode = self.get_resize_mode(pos)
+    def update_cursor_for_resize(self, pos):
+        """Update cursor based on position for resize indication"""
+        edge = self.get_resize_edge(pos)
 
-        if mode == "corner":
+        if edge in ["top-left", "bottom-right"]:
             self.setCursor(QCursor(Qt.CursorShape.SizeFDiagCursor))
-        elif mode == "right":
+        elif edge in ["top-right", "bottom-left"]:
+            self.setCursor(QCursor(Qt.CursorShape.SizeBDiagCursor))
+        elif edge in ["left", "right"]:
             self.setCursor(QCursor(Qt.CursorShape.SizeHorCursor))
-        elif mode == "bottom":
+        elif edge in ["top", "bottom"]:
             self.setCursor(QCursor(Qt.CursorShape.SizeVerCursor))
+        elif self.header_frame.geometry().contains(pos):
+            self.setCursor(QCursor(Qt.CursorShape.SizeAllCursor))
         else:
             self.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
 
-    def handle_resize(self, global_pos):
-        """Handle window resizing with smoother visual feedback"""
-        if not self.resize_mode:
+    def perform_resize(self, global_pos):
+        """Perform the actual resizing based on the edge being dragged"""
+        if not self.is_resizing or not self.resize_edge:
             return
 
-        diff = global_pos - self.drag_start_position
-        current_size = self.size()
-        new_width = current_size.width()
-        new_height = current_size.height()
+        # Calculate the difference from start position
+        diff = global_pos - self.resize_start_position
+        original_geometry = self.resize_start_geometry
 
-        if self.resize_mode in ["right", "corner"]:
-            new_width = max(300, current_size.width() + diff.x())
+        new_x = original_geometry.x()
+        new_y = original_geometry.y()
+        new_width = original_geometry.width()
+        new_height = original_geometry.height()
 
-        if self.resize_mode in ["bottom", "corner"]:
-            new_height = max(150, current_size.height() + diff.y())
+        # Apply resize based on edge
+        if "left" in self.resize_edge:
+            new_x = original_geometry.x() + diff.x()
+            new_width = original_geometry.width() - diff.x()
+        elif "right" in self.resize_edge:
+            new_width = original_geometry.width() + diff.x()
 
-        # Create ghost overlay for smooth resize feedback if it doesn't exist
-        if not self.resize_ghost and (abs(diff.x()) > 5 or abs(diff.y()) > 5):
-            self.resize_ghost = QWidget(None)
-            self.resize_ghost.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
-            self.resize_ghost.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-            self.resize_ghost.setStyleSheet("background-color: rgba(137, 180, 250, 0.2); border: 1px solid #89b4fa;")
-            self.resize_ghost.show()
+        if "top" in self.resize_edge:
+            new_y = original_geometry.y() + diff.y()
+            new_height = original_geometry.height() - diff.y()
+        elif "bottom" in self.resize_edge:
+            new_height = original_geometry.height() + diff.y()
 
-        # Update ghost position and size
-        if self.resize_ghost:
-            self.resize_ghost.setGeometry(self.x(), self.y(), new_width, new_height)
+        # Apply minimum size constraints
+        min_width = 300
+        min_height = 150
 
-        # Actually resize window at a reduced rate for performance
-        # This avoids lag during rapid resizing
-        if not hasattr(self, 'last_resize_time') or time.time() - self.last_resize_time > 0.05:
-            self.resize(new_width, new_height)
-            self.last_resize_time = time.time()
+        if new_width < min_width:
+            if "left" in self.resize_edge:
+                new_x = new_x - (min_width - new_width)
+            new_width = min_width
 
-        self.drag_start_position = global_pos
-        self.update_status(f"Resizing...")
+        if new_height < min_height:
+            if "top" in self.resize_edge:
+                new_y = new_y - (min_height - new_height)
+            new_height = min_height
 
-    def mouseReleaseEvent(self, event):
-        # Apply final size when mouse released and clean up ghost
-        if self.resize_mode and self.resize_ghost:
-            # Get final size from ghost
-            final_size = self.resize_ghost.size()
-            self.resize(final_size.width(), final_size.height())
-
-            # Clean up ghost
-            self.resize_ghost.close()
-            self.resize_ghost.deleteLater()
-            self.resize_ghost = None
-
-            self.update_status(f"Resized to {final_size.width()}x{final_size.height()}")
-
-        self.drag_start_position = None
-        self.resize_mode = None
-
-    def showEvent(self, event):
-        # Update main frame rounded corners on show
-        self.main_frame.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
-        super().showEvent(event)
+        # Apply the new geometry
+        self.setGeometry(new_x, new_y, new_width, new_height)
 
 class SettingsDialog(QDialog):
     """Settings dialog for model selection"""
@@ -591,8 +742,20 @@ class SettingsDialog(QDialog):
         """)
 
         self.model_combo = QComboBox()
-        self.model_combo.addItems(AVAILABLE_MODELS)
-        self.model_combo.setCurrentText(self.current_model)
+        self.model_combo.addItems(AVAILABLE_MODELS.keys())
+
+        # Find the display name for the current model
+        current_display_name = None
+        for display_name, actual_name in AVAILABLE_MODELS.items():
+            if actual_name == self.current_model:
+                current_display_name = display_name
+                break
+
+        if current_display_name:
+            self.model_combo.setCurrentText(current_display_name)
+        else:
+            self.model_combo.setCurrentIndex(0)
+
         self.model_combo.setStyleSheet("""
             QComboBox {
                 background-color: #45475a;
@@ -737,7 +900,7 @@ class ControlWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.current_model = AVAILABLE_MODELS[0]
+        self.current_model = list(AVAILABLE_MODELS.values())[0]
         self.translation_overlay = None
         self.screen_selector = None
         self.translation_worker = None
@@ -925,10 +1088,20 @@ class ControlWindow(QMainWindow):
         """Process the selected screen area"""
         print(f"Selected area: x={x}, y={y}, width={width}, height={height}")
 
-        # Create translation overlay if it doesn't exist
-        if not self.translation_overlay:
+        # Create or recreate translation overlay (handle case where it was closed)
+        if not self.translation_overlay or not self.translation_overlay.isVisible():
+            if self.translation_overlay:
+                # Clean up existing overlay if it exists but is not visible
+                self.translation_overlay.close()
+                self.translation_overlay.deleteLater()
+
             self.translation_overlay = TranslationOverlay()
             self.translation_overlay.show()
+        else:
+            # If overlay exists and is visible, just bring it to front
+            self.translation_overlay.show()
+            self.translation_overlay.raise_()
+            self.translation_overlay.activateWindow()
 
         self.translation_overlay.update_text("กำลังสกัดข้อความจากภาพ...")
 
@@ -1041,8 +1214,10 @@ class ControlWindow(QMainWindow):
         """Show settings dialog"""
         dialog = SettingsDialog(self.current_model, self)
         if dialog.exec() == QDialog.DialogCode.Accepted:
-            self.current_model = dialog.get_selected_model()
-            print(f"[INFO] Changed model to: {self.current_model}")
+            selected_display_name = dialog.get_selected_model()
+            # Convert display name to actual model name
+            self.current_model = AVAILABLE_MODELS[selected_display_name]
+            print(f"[INFO] Changed model to: {selected_display_name} ({self.current_model})")
 
     def _on_alt_pressed(self, e):
         """Handle Alt key double press"""
