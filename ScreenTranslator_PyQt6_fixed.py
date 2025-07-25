@@ -278,13 +278,6 @@ class TranslationOverlay(QWidget):
             }
         """)
 
-        # Remove glow effect to prevent Windows rendering issues
-        # glow_effect = QGraphicsDropShadowEffect()
-        # glow_effect.setBlurRadius(20)
-        # glow_effect.setColor(QColor(137, 180, 250, 40))
-        # glow_effect.setOffset(0, 0)
-        # self.main_frame.setGraphicsEffect(glow_effect)
-
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self.main_frame)
@@ -440,8 +433,22 @@ class TranslationOverlay(QWidget):
         layout.addWidget(self.translation_text)
 
     def setup_footer(self, layout):
-        footer_layout = QHBoxLayout()
+        # Create footer container with fixed size (FIXED VERSION)
+        self.footer_frame = QFrame()
+        self.footer_frame.setStyleSheet("""
+            QFrame {
+                background: transparent;
+                border: none;
+            }
+        """)
+
+        # Lock footer size - prevent resizing
+        self.footer_frame.setFixedHeight(30)  # Fixed height for footer
+        self.footer_frame.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+
+        footer_layout = QHBoxLayout(self.footer_frame)
         footer_layout.setSpacing(10)
+        footer_layout.setContentsMargins(0, 0, 0, 0)
 
         # Status indicator
         self.status_label = QLabel("Ready")
@@ -478,7 +485,7 @@ class TranslationOverlay(QWidget):
         self.copy_indicator.hide()
 
         footer_layout.addWidget(self.copy_indicator)
-        layout.addLayout(footer_layout)
+        layout.addWidget(self.footer_frame)  # Add the container frame instead of just the layout
 
     def update_text(self, text):
         """Update translation text and copy to clipboard"""
@@ -554,7 +561,6 @@ class TranslationOverlay(QWidget):
                 self.resize_edge = resize_edge
                 self.resize_start_position = event.globalPosition().toPoint()
                 self.resize_start_geometry = self.geometry()
-                # Don't change cursor during resize
                 return
 
             # Check if click is on header frame for dragging
@@ -562,8 +568,6 @@ class TranslationOverlay(QWidget):
             if header_rect.contains(click_pos):
                 self.is_dragging = True
                 self.drag_start_position = event.globalPosition().toPoint() - self.pos()
-                # Don't change cursor during drag
-                # self.setCursor(QCursor(Qt.CursorShape.ClosedHandCursor))
 
     def mouseMoveEvent(self, event):
         """Handle mouse move for dragging and resizing"""
@@ -572,10 +576,6 @@ class TranslationOverlay(QWidget):
         elif self.is_dragging and self.drag_start_position is not None:
             new_pos = event.globalPosition().toPoint() - self.drag_start_position
             self.move(new_pos)
-        # Remove cursor updates during mouse move
-        # else:
-        #     # Update cursor based on position
-        #     self.update_cursor_for_resize(event.position().toPoint())
 
     def mouseReleaseEvent(self, event):
         """Handle mouse release"""
@@ -586,9 +586,6 @@ class TranslationOverlay(QWidget):
             self.resize_start_position = None
             self.resize_start_geometry = None
             self.resize_edge = None
-
-            # Don't update cursor after release
-            # self.update_cursor_for_resize(event.position().toPoint())
 
     def get_resize_edge(self, pos):
         """Determine which edge/corner is being clicked for resizing"""
@@ -686,12 +683,9 @@ class TranslationOverlay(QWidget):
         # Calculate available height for text area
         total_height = self.height()
 
-        # Get actual heights of header and footer (fixed sizes)
-        header_actual_height = self.header_frame.sizeHint().height()
-
-        # Calculate footer height from actual layout
-        footer_layout = self.status_label.parent().layout()
-        footer_actual_height = footer_layout.sizeHint().height() if footer_layout else 40
+        # Get actual heights of header and footer (NOW BOTH ARE FIXED)
+        header_actual_height = self.header_frame.height()  # Now fixed at 40px
+        footer_actual_height = self.footer_frame.height()  # Now fixed at 30px
 
         # Fixed margins and spacing from layout
         content_margins = 30  # main_frame margins (15 * 2)
@@ -701,35 +695,17 @@ class TranslationOverlay(QWidget):
         fixed_elements_height = header_actual_height + footer_actual_height + content_margins + spacing
         available_height = total_height - fixed_elements_height
 
-        # Ensure minimum and maximum bounds for text area
+        # Ensure minimum bound for text area but allow flexible maximum
         min_text_height = 60
-        max_text_height = 600
-        text_height = max(min_text_height, min(available_height, max_text_height))
+        text_height = max(min_text_height, available_height)
 
-        # Update only the text area size - header and footer stay fixed
+        # Set both minimum and maximum to the same value to make it fixed at calculated size
+        # This allows both expanding and shrinking
         self.translation_text.setMinimumHeight(text_height)
         self.translation_text.setMaximumHeight(text_height)
 
         # Force layout update
         self.main_frame.layout().update()
-
-    # Comment out the cursor update method to disable cursor changes
-    # def update_cursor_for_resize(self, pos):
-    #     """Update cursor based on position for resize indication"""
-    #     edge = self.get_resize_edge(pos)
-    #
-    #     if edge in ["top-left", "bottom-right"]:
-    #         self.setCursor(QCursor(Qt.CursorShape.SizeFDiagCursor))
-    #     elif edge in ["top-right", "bottom-left"]:
-    #         self.setCursor(QCursor(Qt.CursorShape.SizeBDiagCursor))
-    #     elif edge in ["left", "right"]:
-    #         self.setCursor(QCursor(Qt.CursorShape.SizeHorCursor))
-    #     elif edge in ["top", "bottom"]:
-    #         self.setCursor(QCursor(Qt.CursorShape.SizeVerCursor))
-    #     elif self.header_frame.geometry().contains(pos):
-    #         self.setCursor(QCursor(Qt.CursorShape.SizeAllCursor))
-    #     else:
-    #         self.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
 
 
 class SettingsDialog(QDialog):
@@ -739,7 +715,7 @@ class SettingsDialog(QDialog):
         super().__init__(parent)
         self.current_model = current_model
         self.setWindowTitle("Settings")
-        self.setFixedSize(300, 400)  # Reduced from 500x400 to 400x320
+        self.setFixedSize(300, 400)
         self.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.WindowStaysOnTopHint)
 
         self.setup_ui()
@@ -754,15 +730,15 @@ class SettingsDialog(QDialog):
         """)
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(20, 20, 20, 20)  # Reduced from 25px to 20px
-        layout.setSpacing(15)  # Reduced from 20px to 15px
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(15)
 
         # Header
         title = QLabel("⚙️ Settings")
         title.setStyleSheet("""
             QLabel {
                 color: #89b4fa;
-                font: bold 18px 'Segoe UI';  /* Reduced from 20px to 18px */
+                font: bold 18px 'Segoe UI';
             }
         """)
 
@@ -770,7 +746,7 @@ class SettingsDialog(QDialog):
         subtitle.setStyleSheet("""
             QLabel {
                 color: #cdd6f4;
-                font: 12px 'Segoe UI';  /* Reduced from 13px to 12px */
+                font: 12px 'Segoe UI';
                 margin-top: 3px;
             }
         """)
@@ -798,8 +774,8 @@ class SettingsDialog(QDialog):
         model_label.setStyleSheet("""
             QLabel {
                 color: #cdd6f4;
-                font: bold 13px 'Segoe UI';  /* Reduced from 14px to 13px */
-                margin-top: 5px;  /* Reduced from 8px to 5px */
+                font: bold 13px 'Segoe UI';
+                margin-top: 5px;
             }
         """)
 
@@ -822,20 +798,20 @@ class SettingsDialog(QDialog):
             QComboBox {
                 background-color: #45475a;
                 color: #cdd6f4;
-                font: 12px 'Segoe UI';  /* Reduced from 13px to 12px */
-                padding: 6px;  /* Reduced from 8px to 6px */
+                font: 12px 'Segoe UI';
+                padding: 6px;
                 border: none;
                 border-radius: 5px;
-                min-height: 28px;  /* Reduced from 30px to 28px */
+                min-height: 28px;
             }
             QComboBox::drop-down {
                 border: none;
-                width: 25px;  /* Reduced from 30px to 25px */
+                width: 25px;
             }
             QComboBox::down-arrow {
                 color: #cdd6f4;
-                width: 20px;  /* Added width */
-                height: 20px;  /* Added height */
+                width: 20px;
+                height: 20px;
             }
             QComboBox QAbstractItemView {
                 background-color: #45475a;
@@ -856,8 +832,8 @@ class SettingsDialog(QDialog):
         status_label.setStyleSheet("""
             QLabel {
                 color: #cdd6f4;
-                font: bold 13px 'Segoe UI';  /* Reduced from 14px to 13px */
-                margin-top: 5px;  /* Reduced from 8px to 5px */
+                font: bold 13px 'Segoe UI';
+                margin-top: 5px;
             }
         """)
 
@@ -866,10 +842,10 @@ class SettingsDialog(QDialog):
             QLabel {
                 background-color: #45475a;
                 color: #cdd6f4;
-                font: 12px 'Segoe UI';  /* Reduced from 13px to 12px */
-                padding: 10px;  /* Reduced from 12px to 10px */
+                font: 12px 'Segoe UI';
+                padding: 10px;
                 border-radius: 5px;
-                min-height: 50px;  /* Reduced from 60px to 50px */
+                min-height: 50px;
             }
         """)
         self.status_text.setWordWrap(True)
@@ -909,8 +885,8 @@ class SettingsDialog(QDialog):
             QPushButton {{
                 background-color: {bg_color};
                 color: {text_color};
-                font: {'bold' if primary else 'normal'} 12px 'Segoe UI';  /* Reduced from 13px to 12px */
-                padding: 8px 20px;  /* Reduced from 10px/24px to 8px/20px */
+                font: {'bold' if primary else 'normal'} 12px 'Segoe UI';
+                padding: 8px 20px;
                 border: none;
                 border-radius: 5px;
             }}
@@ -927,10 +903,10 @@ class SettingsDialog(QDialog):
                 QLabel {
                     background-color: #45475a;
                     color: #a6e3a1;
-                    font: 12px 'Segoe UI';  /* Reduced from 13px to 12px */
-                    padding: 10px;  /* Reduced from 12px to 10px */
+                    font: 12px 'Segoe UI';
+                    padding: 10px;
                     border-radius: 5px;
-                    min-height: 50px;  /* Reduced from 60px to 50px */
+                    min-height: 50px;
                 }
             """)
         except Exception as e:
@@ -939,10 +915,10 @@ class SettingsDialog(QDialog):
                 QLabel {
                     background-color: #45475a;
                     color: #f38ba8;
-                    font: 12px 'Segoe UI';  /* Reduced from 13px to 12px */
-                    padding: 10px;  /* Reduced from 12px to 10px */
+                    font: 12px 'Segoe UI';
+                    padding: 10px;
                     border-radius: 5px;
-                    min-height: 50px;  /* Reduced from 60px to 50px */
+                    min-height: 50px;
                 }
             """)
 
@@ -979,7 +955,7 @@ class ControlWindow(QMainWindow):
 
     def setup_ui(self):
         self.setWindowTitle("Screen Translator")
-        self.setFixedSize(300, 350)  # Increased window size
+        self.setFixedSize(300, 350)
 
         # Set modern dark theme
         self.setStyleSheet("""
@@ -1005,20 +981,7 @@ class ControlWindow(QMainWindow):
         self.setup_footer(layout)
 
     def setup_header(self, layout):
-        # Create draggable header
-        self.header_frame = QFrame()
-        self.header_frame.setStyleSheet("""
-            QFrame {
-                background: transparent;
-                border: none;
-            }
-        """)
-
-        # Lock header size - prevent resizing
-        self.header_frame.setFixedHeight(40)  # Fixed height for header
-        self.header_frame.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-
-        header_layout = QVBoxLayout(self.header_frame)
+        header_layout = QVBoxLayout()
         header_layout.setSpacing(5)
 
         title = QLabel("Screen Translator")
@@ -1041,20 +1004,20 @@ class ControlWindow(QMainWindow):
 
         header_layout.addWidget(title)
         header_layout.addWidget(subtitle)
-        layout.addWidget(self.header_frame)
+        layout.addLayout(header_layout)
 
     def setup_buttons(self, layout):
         # Capture button
         capture_btn = QPushButton("📱 Capture Screen Area")
         capture_btn.setStyleSheet(self.get_button_style())
         capture_btn.clicked.connect(self.start_screen_selection)
-        capture_btn.setMinimumHeight(45)  # Taller button
+        capture_btn.setMinimumHeight(45)
 
         # Settings button
         settings_btn = QPushButton("⚙️ Settings")
         settings_btn.setStyleSheet(self.get_button_style())
         settings_btn.clicked.connect(self.show_settings)
-        settings_btn.setMinimumHeight(45)  # Taller button
+        settings_btn.setMinimumHeight(45)
 
         layout.addWidget(capture_btn)
         layout.addWidget(settings_btn)
@@ -1248,42 +1211,6 @@ class ControlWindow(QMainWindow):
         if self.translation_overlay:
             self.translation_overlay.update_text(translated_text)
         print(f"[INFO] Translated Text: '{translated_text}'")
-
-    @staticmethod
-    def _get_text_from_screen_area(x, y, width, height):
-        """Capture text from screen area using OCR"""
-        try:
-            # Ensure we're not trying to capture while another operation is in progress
-            QApplication.processEvents()
-
-            with mss.mss() as sct:
-                # Ensure coordinates and dimensions are positive integers
-                x, y = max(0, int(x)), max(0, int(y))
-                width, height = max(1, int(width)), max(1, int(height))
-
-                # Capture the screen area
-                monitor = {"top": y, "left": x, "width": width, "height": height}
-                sct_img = sct.grab(monitor)
-
-                # Convert to PIL Image for OCR processing
-                img = Image.frombytes("RGB", sct_img.size, sct_img.rgb)
-
-                # Apply some image processing to improve OCR accuracy
-                img = img.convert('L')  # Convert to grayscale
-
-                # Perform OCR
-                text = pytesseract.image_to_string(img, lang='eng', config='--psm 6')
-
-                # If text is empty, try different OCR settings
-                if not text.strip():
-                    text = pytesseract.image_to_string(img, lang='eng', config='--psm 3')
-
-                return text.strip()
-        except pytesseract.pytesseract.TesseractNotFoundError:
-            return "ERROR: Tesseract OCR not installed or not in PATH"
-        except Exception as e:
-            print(f"[ERROR] Screen capture exception: {e}")
-            return f"ERROR: {str(e)}"
 
     def show_settings(self):
         """Show settings dialog"""
