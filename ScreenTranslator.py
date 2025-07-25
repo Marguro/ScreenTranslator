@@ -42,6 +42,13 @@ class ScreenTranslatorApp:
         self.selection_start_x = 0
         self.selection_start_y = 0
 
+        # Additional instance variables for overlay dragging
+        self.drag_data = {"x": 0, "y": 0, "item": None}
+        self.overlay_width = 500
+        self.overlay_height = 200
+        self.overlay_x = 0
+        self.overlay_y = 0
+
         self._initialize_tesseract()
 
     def _initialize_tesseract(self):
@@ -69,7 +76,7 @@ class ScreenTranslatorApp:
             )
             translated_text = response['response'].strip()
             if not any('\u0e00' <= char <= '\u0e7f' for char in translated_text):
-                return f"Translation Error: ไม่พบตัวอักษร\n\nOriginal response: {translated_text}"
+                return f"Translation Error: ตัวอักษรไม่ถูกต้อง\n\nOriginal response: {translated_text}"
             return translated_text
         except Exception as e:
             print(f"[ERROR] Translation failed: {e}")
@@ -129,22 +136,95 @@ class ScreenTranslatorApp:
         self.translation_window.overrideredirect(True)
         self.translation_window.attributes('-alpha', 0.9, '-topmost', True)
 
-        screen_width = self.translation_window.winfo_screenwidth()
-        self.translation_window.geometry(f"500x200+{screen_width - 520}+20")
+        # Default position on first creation
+        if self.overlay_x == 0 and self.overlay_y == 0:
+            screen_width = self.translation_window.winfo_screenwidth()
+            self.overlay_x = screen_width - self.overlay_width - 20
+            self.overlay_y = 20
 
-        button_frame = tk.Frame(self.translation_window, bg="black")
+        self.translation_window.geometry(f"{self.overlay_width}x{self.overlay_height}+{self.overlay_x}+{self.overlay_y}")
+
+        # Main frame for content that can be dragged
+        main_frame = tk.Frame(self.translation_window, bg="black")
+        main_frame.pack(fill=tk.BOTH, expand=True)
+
+        # Add resize grip at bottom-right corner
+        sizegrip = tk.Label(main_frame, text="◢", bg="black", fg="white", cursor="sizing")
+        sizegrip.pack(side=tk.BOTTOM, anchor=tk.SE, padx=5, pady=5)
+
+        # Make window draggable from the header
+        button_frame = tk.Frame(main_frame, bg="black")
         button_frame.pack(side=tk.TOP, fill=tk.X, padx=5, pady=5)
 
-        tk.Button(button_frame, text="✖", command=lambda: self.translation_window.destroy(), font=("Arial", 10), bg="black", fg="white").pack(side=tk.RIGHT)
-        tk.Button(button_frame, text="⚙️", command=self._show_settings, font=("Arial", 10), bg="black", fg="white").pack(side=tk.RIGHT, padx=5)
+        # Add a drag handle
+        drag_label = tk.Label(button_frame, text="≡", bg="black", fg="white", cursor="fleur")
+        drag_label.pack(side=tk.LEFT, padx=5)
 
+        # Buttons
+        tk.Button(button_frame, text="✖", command=lambda: self.translation_window.destroy(),
+                  font=("Arial", 10), bg="black", fg="white").pack(side=tk.RIGHT)
+        tk.Button(button_frame, text="⚙️", command=self._show_settings,
+                  font=("Arial", 10), bg="black", fg="white").pack(side=tk.RIGHT, padx=5)
+
+        # Content area
         self.translation_label = scrolledtext.ScrolledText(
-            self.translation_window, bg="black", fg="white", font=("Arial", 14, "bold"),
+            main_frame, bg="black", fg="white", font=("Arial", 14, "bold"),
             wrap=tk.WORD, padx=10, pady=10
         )
         self.translation_label.pack(expand=True, fill="both", padx=10, pady=(0, 10))
         self.translation_label.config(state=tk.DISABLED)
+
+        # Bind events for dragging
+        drag_label.bind("<ButtonPress-1>", self._start_drag)
+        drag_label.bind("<ButtonRelease-1>", self._stop_drag)
+        drag_label.bind("<B1-Motion>", self._on_drag)
+
+        # Bind events for resizing
+        sizegrip.bind("<ButtonPress-1>", self._start_resize)
+        sizegrip.bind("<ButtonRelease-1>", self._stop_resize)
+        sizegrip.bind("<B1-Motion>", self._on_resize)
+
         self.translation_window.focus_set()
+
+    def _start_drag(self, event):
+        """Begins drag operation for overlay window"""
+        self.drag_data["x"] = event.x
+        self.drag_data["y"] = event.y
+
+    def _on_drag(self, event):
+        """Handles dragging of the overlay window"""
+        x = self.translation_window.winfo_x() + (event.x - self.drag_data["x"])
+        y = self.translation_window.winfo_y() + (event.y - self.drag_data["y"])
+        self.translation_window.geometry(f"+{x}+{y}")
+        # Store position for future window creations
+        self.overlay_x = x
+        self.overlay_y = y
+
+    def _stop_drag(self, event):
+        """Ends drag operation"""
+        self.drag_data["x"] = 0
+        self.drag_data["y"] = 0
+
+    def _start_resize(self, event):
+        """Begins resize operation"""
+        self.drag_data["x"] = event.x
+        self.drag_data["y"] = event.y
+
+    def _on_resize(self, event):
+        """Handles resizing of the overlay window"""
+        width = max(300, self.overlay_width + (event.x - self.drag_data["x"]))
+        height = max(150, self.overlay_height + (event.y - self.drag_data["y"]))
+        self.translation_window.geometry(f"{width}x{height}")
+        # Store size for future window creations
+        self.overlay_width = width
+        self.overlay_height = height
+        self.drag_data["x"] = event.x
+        self.drag_data["y"] = event.y
+
+    def _stop_resize(self, event):
+        """Ends resize operation"""
+        self.drag_data["x"] = 0
+        self.drag_data["y"] = 0
 
     def _update_translation_display(self, text):
         """Updates the text in the translation overlay window."""
@@ -167,6 +247,13 @@ class ScreenTranslatorApp:
         self.settings_window.title("Settings")
         self.settings_window.geometry("400x250")
         self.settings_window.attributes('-topmost', True)
+
+        # Center the settings window on screen
+        screen_width = self.settings_window.winfo_screenwidth()
+        screen_height = self.settings_window.winfo_screenheight()
+        x = (screen_width - 400) // 2
+        y = (screen_height - 250) // 2
+        self.settings_window.geometry(f"+{x}+{y}")
 
         tk.Label(self.settings_window, text="Select Ollama Model:").pack(pady=(20, 5))
         self.model_var = StringVar(value=self.current_model)
@@ -197,11 +284,12 @@ class ScreenTranslatorApp:
             return
 
         self.selection_window = tk.Toplevel(self.root)
-        self.selection_window.attributes('-fullscreen', True, '-alpha', 0.3, '-topmost', True)
+        self.selection_window.attributes('-fullscreen', True, '-alpha', 0.45, '-topmost', True) # Semi-transparent fullscreen
         self.selection_window.bind("<Escape>", lambda e: self.selection_window.destroy())
 
         self.canvas = tk.Canvas(self.selection_window, cursor="cross", bg="black")
         self.canvas.pack(fill=tk.BOTH, expand=True)
+
         self.canvas.bind("<ButtonPress-1>", self._on_selection_start)
         self.canvas.bind("<B1-Motion>", self._on_selection_motion)
         self.canvas.bind("<ButtonRelease-1>", self._on_selection_complete)
@@ -219,7 +307,7 @@ class ScreenTranslatorApp:
             self.canvas.delete(self.selection_rect)
         self.selection_rect = self.canvas.create_rectangle(
             event.x, event.y, event.x, event.y,
-            fill="white", dash=(4, 2), width=3
+            outline="white", fill="white", dash=(4, 2), width=3
         )
 
     def _on_selection_motion(self, event):
