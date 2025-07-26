@@ -33,8 +33,10 @@ class Config:
 
     # Model configurations
     AVAILABLE_MODELS = {
+        "Gemma 3n": "gemma3n",
         "Gemma 3n (Unsloth)": "hf.co/unsloth/gemma-3n-E4B-it-GGUF:Q4_K_XL",
-        "Gemma 3n": "gemma3n"
+        "qwen3": "qwen3:4b",
+        "phi3 (mini)": "phi3:mini"
     }
 
     # Window settings
@@ -207,7 +209,7 @@ class TranslationWorker(QThread):
         """Run the translation process in the background"""
         try:
             prompt = (
-                f'Translate the following English sentence into Thai without explain it in detail:\n'
+                f'Translate English to Thai, only provide Thai translation:\n'
                 f'"{self.text}"\n\nThai Translation:'
             )
 
