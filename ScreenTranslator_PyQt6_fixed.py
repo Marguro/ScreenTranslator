@@ -362,6 +362,32 @@ class TranslationOverlay(QWidget):
         header_layout.addLayout(icon_title_layout)
         header_layout.addStretch()
 
+        # Settings button
+        settings_btn = QPushButton("⚙️")
+        settings_btn.setStyleSheet("""
+            QPushButton {
+                background: rgba(137, 180, 250, 0.1);
+                color: #89b4fa;
+                border: 1px solid rgba(137, 180, 250, 0.3);
+                border-radius: 12px;
+                font: bold 12px 'Segoe UI';
+                padding: 4px;
+                min-width: 24px;
+                max-width: 24px;
+                min-height: 24px;
+                max-height: 24px;
+            }
+            QPushButton:hover {
+                background: rgba(137, 180, 250, 0.2);
+                border: 1px solid rgba(137, 180, 250, 0.5);
+            }
+            QPushButton:pressed {
+                background: rgba(137, 180, 250, 0.3);
+            }
+        """)
+        settings_btn.setToolTip("Settings")
+        settings_btn.clicked.connect(self.show_settings)
+
         # Close button
         close_btn = QPushButton("✕")
         close_btn.setStyleSheet("""
@@ -387,6 +413,7 @@ class TranslationOverlay(QWidget):
         """)
         close_btn.clicked.connect(self.close)
 
+        header_layout.addWidget(settings_btn)
         header_layout.addWidget(close_btn)
         layout.addWidget(self.header_frame)
 
@@ -675,6 +702,31 @@ class TranslationOverlay(QWidget):
 
         # ลบการเรียก update_text_area_height() เพื่อให้สามารถ resize ได้อย่างอิสระ
         # เมื่อ resize ขอบบน-ล่าง ขนาดจะเปลี่ยนตามที่ผู้ใช้ต้องการ
+
+    def show_settings(self):
+        """Show settings dialog from overlay"""
+        # Get the main window reference from the application
+        app = QApplication.instance()
+        if hasattr(app, 'main_window') and app.main_window:
+            main_window = app.main_window
+        else:
+            # Find the main window in all top-level widgets
+            main_window = None
+            for widget in QApplication.topLevelWidgets():
+                if isinstance(widget, ControlWindow):
+                    main_window = widget
+                    break
+
+        if main_window:
+            # Create settings dialog with main window as parent
+            dialog = SettingsDialog(main_window.current_model, main_window)
+            if dialog.exec() == QDialog.DialogCode.Accepted:
+                selected_display_name = dialog.get_selected_model()
+                # Convert display name to actual model name
+                main_window.current_model = AVAILABLE_MODELS[selected_display_name]
+                print(f"[INFO] Changed model to: {selected_display_name} ({main_window.current_model})")
+        else:
+            QMessageBox.warning(self, "Error", "Cannot find main window to open settings.")
 
 class SettingsDialog(QDialog):
     """Settings dialog for model selection"""
