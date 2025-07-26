@@ -18,7 +18,7 @@ from PyQt6.QtWidgets import (
     QPushButton, QLabel, QTextEdit, QComboBox, QFrame, QDialog,
     QMessageBox, QRubberBand, QSizePolicy
 )
-from PyQt6.QtCore import Qt, QRect, QPoint, QSize, QTimer, pyqtSignal, QThread
+from PyQt6.QtCore import Qt, QRect, QPoint, QSize, QTimer, pyqtSignal, QThread, QPropertyAnimation, QEasingCurve
 from PyQt6.QtGui import QPalette, QColor, QPainter, QPen, QRegion
 
 
@@ -33,8 +33,10 @@ class Config:
 
     # Model configurations
     AVAILABLE_MODELS = {
+        "Gemma 3n": "gemma3n",
         "Gemma 3n (Unsloth)": "hf.co/unsloth/gemma-3n-E4B-it-GGUF:Q4_K_XL",
-        "Gemma 3n": "gemma3n"
+        #"qwen3": "qwen3:4b",
+        "phi3 (mini)": "phi3:mini"
     }
 
     # Window settings
@@ -207,7 +209,7 @@ class TranslationWorker(QThread):
         """Run the translation process in the background"""
         try:
             prompt = (
-                f'Translate the following English sentence into Thai without explain it in detail:\n'
+                f'Translate English to Thai, only provide Thai translation:\n'
                 f'"{self.text}"\n\nThai Translation:'
             )
 
@@ -600,11 +602,13 @@ class TranslationOverlay(QWidget):
         settings_btn = QPushButton("⚙️")
         settings_btn.setStyleSheet(StyleManager.get_icon_button_style('primary'))
         settings_btn.setToolTip("Settings")
+        # noinspection PyUnresolvedReferences
         settings_btn.clicked.connect(self._show_settings)
 
         # Close button
         close_btn = QPushButton("✕")
         close_btn.setStyleSheet(StyleManager.get_icon_button_style('secondary'))
+        # noinspection PyUnresolvedReferences
         close_btn.clicked.connect(self.close)
 
         layout.addWidget(settings_btn)
@@ -641,7 +645,50 @@ class TranslationOverlay(QWidget):
 
     def _setup_animations(self):
         """Setup entrance animations"""
-        pass  # Animation setup can be added here if needed
+        # เริ่มต้นด้วยการซ่อน widget
+        self.setWindowOpacity(0.0)
+
+        # เก็บตำแหน่งเดิมไว้
+        self.original_pos = self.pos()
+
+        # ตั้งตำแหน่งเริ่มต้นสำหรับ slide animation
+        start_pos = QPoint(self.original_pos.x(), self.original_pos.y() - 30)
+        self.move(start_pos)
+
+        # Fade-in animation (ใช้ window opacity แทน graphics effect)
+        self.fade_animation = QPropertyAnimation(self, b"windowOpacity")
+        self.fade_animation.setDuration(400)
+        self.fade_animation.setStartValue(0.0)
+        self.fade_animation.setEndValue(1.0)
+        self.fade_animation.setEasingCurve(QEasingCurve.Type.OutCubic)
+
+        # Slide-in animation
+        self.slide_animation = QPropertyAnimation(self, b"pos")
+        self.slide_animation.setDuration(400)
+        self.slide_animation.setStartValue(start_pos)
+        self.slide_animation.setEndValue(self.original_pos)
+        self.slide_animation.setEasingCurve(QEasingCurve.Type.OutCubic)
+
+        # Scale animation สำหรับเอฟเฟค "pop-in"
+        self.scale_animation = QPropertyAnimation(self, b"size")
+        self.scale_animation.setDuration(400)
+
+        # เริ่มจากขนาดเล็กกว่าเล็กน้อย
+        start_size = QSize(int(self.width() * 0.95), int(self.height() * 0.95))
+        end_size = self.size()
+
+        self.scale_animation.setStartValue(start_size)
+        self.scale_animation.setEndValue(end_size)
+        self.scale_animation.setEasingCurve(QEasingCurve.Type.OutBack)
+
+        # เริ่มอนิเมชันพร้อมกัน
+        QTimer.singleShot(50, self._start_animations)
+
+    def _start_animations(self):
+        """เริ่มอนิเมชันทั้งหมด"""
+        self.fade_animation.start()
+        self.slide_animation.start()
+        self.scale_animation.start()
 
     def update_text(self, text):
         """Update translation text and copy to clipboard"""
@@ -659,8 +706,24 @@ class TranslationOverlay(QWidget):
 
     def _show_settings(self):
         """Show settings dialog"""
-        # Implementation for showing settings
-        pass
+        # Get the main window to access current model and settings
+        main_window = None
+        for widget in QApplication.topLevelWidgets():
+            if isinstance(widget, ControlWindow):
+                main_window = widget
+                break
+
+        if main_window:
+            # Create and show settings dialog
+            dialog = SettingsDialog(main_window.current_model, self)
+            if dialog.exec() == QDialog.DialogCode.Accepted:
+                selected_display_name = dialog.get_selected_model()
+                main_window.current_model = Config.AVAILABLE_MODELS[selected_display_name]
+                print(f"[INFO] Changed model to: {selected_display_name} ({main_window.current_model})")
+        else:
+            # Fallback if main window not found
+            dialog = SettingsDialog(list(Config.AVAILABLE_MODELS.values())[0], self)
+            dialog.exec()
 
     # Mouse event handlers for drag and resize functionality
     def mousePressEvent(self, event):
@@ -967,11 +1030,13 @@ class SettingsDialog(QDialog):
 
         cancel_btn = QPushButton("Cancel")
         cancel_btn.setStyleSheet(StyleManager.get_button_style("#313244", "#45475a"))
+        # noinspection PyUnresolvedReferences
         cancel_btn.clicked.connect(self.reject)
         cancel_btn.setMinimumSize(100, 40)
 
         save_btn = QPushButton("💾 Save Settings")
         save_btn.setStyleSheet(StyleManager.get_button_style("#89b4fa", "#74c7ec", "#1e1e2e"))
+        # noinspection PyUnresolvedReferences
         save_btn.clicked.connect(self.accept)
         save_btn.setMinimumSize(150, 40)
 
@@ -1080,6 +1145,7 @@ class ControlWindow(QMainWindow):
         capture_btn.setStyleSheet(StyleManager.get_button_style(
             "#313244", "#45475a", padding="12px 20px", font_size=14
         ))
+        # noinspection PyUnresolvedReferences
         capture_btn.clicked.connect(self.start_screen_selection)
         capture_btn.setMinimumHeight(45)
 
@@ -1087,6 +1153,7 @@ class ControlWindow(QMainWindow):
         settings_btn.setStyleSheet(StyleManager.get_button_style(
             "#313244", "#45475a", padding="12px 20px", font_size=14
         ))
+        # noinspection PyUnresolvedReferences
         settings_btn.clicked.connect(self.show_settings)
         settings_btn.setMinimumHeight(45)
 
@@ -1140,6 +1207,7 @@ class ControlWindow(QMainWindow):
 
         # Create new selector
         self.screen_selector = ScreenSelector()
+        # noinspection PyUnresolvedReferences
         self.screen_selector.area_selected.connect(self.process_selected_area)
 
         QTimer.singleShot(100, self._show_screen_selector)
@@ -1186,6 +1254,7 @@ class ControlWindow(QMainWindow):
 
                 # Start translation in background
                 self.translation_worker = TranslationWorker(captured_text, self.current_model)
+                # noinspection PyUnresolvedReferences
                 self.translation_worker.translation_finished.connect(self._on_translation_finished)
                 self.translation_worker.start()
             else:
