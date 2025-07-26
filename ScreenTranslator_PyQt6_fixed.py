@@ -116,7 +116,7 @@ class ScreenSelector(QWidget):
         self.rubber_band.setPalette(rubber_band_palette)
 
         # Create instructions label
-        self.instructions = QLabel("คลิกและลากเพื่อเลือกพื้นที่ กด ESC เพื่อยกเลิก", self)
+        self.instructions = QLabel("Click and drag to select area. Press ESC to cancel.", self)
         self.instructions.setStyleSheet("""
             QLabel {
                 color: white;
@@ -261,7 +261,7 @@ class TranslationOverlay(QWidget):
         self.resize_start_geometry = None
         self.is_resizing = False
         self.resize_edge = None
-        self.resize_margin = 8  # Resize detection margin
+        self.resize_margin = 15  # Resize detection margin
 
         self.setup_ui()
 
@@ -428,7 +428,7 @@ class TranslationOverlay(QWidget):
         self.translation_text.setReadOnly(True)
         # Set initial size constraints
         self.translation_text.setMinimumHeight(60)
-        self.translation_text.setMaximumHeight(300)  # Increased maximum to allow more text
+        self.translation_text.setMaximumHeight(1500)  # Increased maximum to allow more text
 
         layout.addWidget(self.translation_text)
 
@@ -592,8 +592,17 @@ class TranslationOverlay(QWidget):
         rect = self.rect()
         margin = self.resize_margin
 
-        # Allow all edges for resizing but no corners
-        if pos.y() <= margin:
+        # Check corners first (they take priority over edges)
+        if pos.x() <= margin and pos.y() <= margin:
+            return "top-left"
+        elif pos.x() >= rect.width() - margin and pos.y() <= margin:
+            return "top-right"
+        elif pos.x() <= margin and pos.y() >= rect.height() - margin:
+            return "bottom-left"
+        elif pos.x() >= rect.width() - margin and pos.y() >= rect.height() - margin:
+            return "bottom-right"
+        # Check edges
+        elif pos.y() <= margin:
             return "top"
         elif pos.y() >= rect.height() - margin:
             return "bottom"
@@ -635,7 +644,7 @@ class TranslationOverlay(QWidget):
         min_width = 500
         min_height = 150
         max_width = 1200
-        max_height = 800
+        max_height = 1500
 
         # Apply width constraints
         if new_width < min_width:
@@ -664,39 +673,8 @@ class TranslationOverlay(QWidget):
         # Apply the new geometry
         self.setGeometry(new_x, new_y, new_width, new_height)
 
-        # Update text area height when resizing vertically
-        if "top" in self.resize_edge or "bottom" in self.resize_edge:
-            self.update_text_area_height()
-
-    def update_text_area_height(self):
-        """Update the height of the text area based on the current window size"""
-        # Calculate available height for text area
-        total_height = self.height()
-
-        # Get actual heights of header and footer (NOW BOTH ARE FIXED)
-        header_actual_height = self.header_frame.height()  # Now fixed at 40px
-        footer_actual_height = self.footer_frame.height()  # Now fixed at 30px
-
-        # Fixed margins and spacing from layout
-        content_margins = 30  # main_frame margins (15 * 2)
-        spacing = 24  # Total spacing between header, content, and footer (12 * 2)
-
-        # Calculate available height for content only
-        fixed_elements_height = header_actual_height + footer_actual_height + content_margins + spacing
-        available_height = total_height - fixed_elements_height
-
-        # Ensure minimum bound for text area but allow flexible maximum
-        min_text_height = 60
-        text_height = max(min_text_height, available_height)
-
-        # Set both minimum and maximum to the same value to make it fixed at calculated size
-        # This allows both expanding and shrinking
-        self.translation_text.setMinimumHeight(text_height)
-        self.translation_text.setMaximumHeight(text_height)
-
-        # Force layout update
-        self.main_frame.layout().update()
-
+        # ลบการเรียก update_text_area_height() เพื่อให้สามารถ resize ได้อย่างอิสระ
+        # เมื่อ resize ขอบบน-ล่าง ขนาดจะเปลี่ยนตามที่ผู้ใช้ต้องการ
 
 class SettingsDialog(QDialog):
     """Settings dialog for model selection"""
