@@ -1,4 +1,4 @@
-﻿"""
+"""
 Screen Translator Application
 A modern PyQt6-based screen translation tool with OCR and AI translation capabilities.
 """
