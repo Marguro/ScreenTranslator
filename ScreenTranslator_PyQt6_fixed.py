@@ -389,19 +389,20 @@ class TranslationOverlay(QWidget):
         settings_btn.clicked.connect(self.show_settings)
 
         # Close button
-        close_btn = QPushButton("✕")
+        close_btn = QPushButton("✕")  # ใช้สัญลักษณ์ × แทน ✕
         close_btn.setStyleSheet("""
             QPushButton {
                 background: rgba(243, 139, 168, 0.1);
                 color: #f38ba8;
                 border: 1px solid rgba(243, 139, 168, 0.3);
                 border-radius: 12px;
-                font: bold 12px 'Segoe UI';
-                padding: 4px;
+                font: bold 16px 'Segoe UI';
+                padding: 4px 4px;
                 min-width: 24px;
                 max-width: 24px;
                 min-height: 24px;
                 max-height: 24px;
+                text-align: center;
             }
             QPushButton:hover {
                 background: rgba(243, 139, 168, 0.2);
