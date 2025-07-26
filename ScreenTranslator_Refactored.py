@@ -18,7 +18,7 @@ from PyQt6.QtWidgets import (
     QPushButton, QLabel, QTextEdit, QComboBox, QFrame, QDialog,
     QMessageBox, QRubberBand, QSizePolicy
 )
-from PyQt6.QtCore import Qt, QRect, QPoint, QSize, QTimer, pyqtSignal, QThread
+from PyQt6.QtCore import Qt, QRect, QPoint, QSize, QTimer, pyqtSignal, QThread, QPropertyAnimation, QEasingCurve
 from PyQt6.QtGui import QPalette, QColor, QPainter, QPen, QRegion
 
 
@@ -643,7 +643,50 @@ class TranslationOverlay(QWidget):
 
     def _setup_animations(self):
         """Setup entrance animations"""
-        pass  # Animation setup can be added here if needed
+        # เริ่มต้นด้วยการซ่อน widget
+        self.setWindowOpacity(0.0)
+
+        # เก็บตำแหน่งเดิมไว้
+        self.original_pos = self.pos()
+
+        # ตั้งตำแหน่งเริ่มต้นสำหรับ slide animation
+        start_pos = QPoint(self.original_pos.x(), self.original_pos.y() - 30)
+        self.move(start_pos)
+
+        # Fade-in animation (ใช้ window opacity แทน graphics effect)
+        self.fade_animation = QPropertyAnimation(self, b"windowOpacity")
+        self.fade_animation.setDuration(400)
+        self.fade_animation.setStartValue(0.0)
+        self.fade_animation.setEndValue(1.0)
+        self.fade_animation.setEasingCurve(QEasingCurve.Type.OutCubic)
+
+        # Slide-in animation
+        self.slide_animation = QPropertyAnimation(self, b"pos")
+        self.slide_animation.setDuration(400)
+        self.slide_animation.setStartValue(start_pos)
+        self.slide_animation.setEndValue(self.original_pos)
+        self.slide_animation.setEasingCurve(QEasingCurve.Type.OutCubic)
+
+        # Scale animation สำหรับเอฟเฟค "pop-in"
+        self.scale_animation = QPropertyAnimation(self, b"size")
+        self.scale_animation.setDuration(400)
+
+        # เริ่มจากขนาดเล็กกว่าเล็กน้อย
+        start_size = QSize(int(self.width() * 0.95), int(self.height() * 0.95))
+        end_size = self.size()
+
+        self.scale_animation.setStartValue(start_size)
+        self.scale_animation.setEndValue(end_size)
+        self.scale_animation.setEasingCurve(QEasingCurve.Type.OutBack)
+
+        # เริ่มอนิเมชันพร้อมกัน
+        QTimer.singleShot(50, self._start_animations)
+
+    def _start_animations(self):
+        """เริ่มอนิเมชันทั้งหมด"""
+        self.fade_animation.start()
+        self.slide_animation.start()
+        self.scale_animation.start()
 
     def update_text(self, text):
         """Update translation text and copy to clipboard"""
