@@ -64,9 +64,9 @@
             <li><strong>ดาวน์โหลด AI Model</strong>:
                 <ul>
                     <li>กดปุ่ม <strong>Start</strong> แล้วพิมพ์คำว่า <code>cmd</code> จะเห็นโปรแกรมชื่อ <strong>"Command Prompt"</strong> ให้คลิกเปิดขึ้นมา</li>
-                    <li>ในหน้าต่างสีดำที่เปิดขึ้นมา ให้คัดลอกคำสั่งด้านล่างนี้ไปวาง แล้วกด Enter (แนะนำให้ติดตั้ง <code>phi3:mini</code> ก่อน เพราะเร็วและเหมาะกับผู้เริ่มต้น)</li>
+                    <li>ในหน้าต่างสีดำที่เปิดขึ้นมา ให้คัดลอกคำสั่งด้านล่างนี้ไปวาง แล้วกด Enter (แนะนำให้ติดตั้ง <code>Gemma 3n</code> ก่อน เพราะคุณภาพการแปลดีและแม่นยำ)</li>
                 </ul>
-                <pre>ollama pull phi3:mini</pre>
+                <pre>ollama pull gemma3n</pre>
                 <ul>
                     <li>รอจนกว่าการดาวน์โหลดจะเสร็จสิ้น (อาจใช้เวลาสักครู่) เมื่อเสร็จแล้วจะขึ้นว่า <code>Success</code></li>
                 </ul>
@@ -101,20 +101,12 @@
             </thead>
             <tbody>
                 <tr>
-                    <td><strong>phi3 (mini)</strong></td>
-                    <td>2.3GB</td>
-                    <td>4GB</td>
-                    <td>⭐⭐⭐⭐⭐</td>
-                    <td>⭐⭐⭐</td>
-                    <td>(แนะนำ) เครื่องทั่วไป, ใช้งานเร็ว</td>
-                </tr>
-                <tr>
                     <td><strong>Gemma 3n</strong></td>
                     <td>~2.0GB</td>
                     <td>4GB</td>
                     <td>⭐⭐⭐⭐</td>
                     <td>⭐⭐⭐⭐</td>
-                    <td>คุณภาพแปลดี, แม่นยำ</td>
+                    <td>(แนะนำ) คุณภาพแปลดี, แม่นยำ</td>
                 </tr>
                 <tr>
                     <td><strong>Gemma 3n (Unsloth)</strong></td>
@@ -135,12 +127,7 @@
         </div>
 
         <ul>
-            <li><strong>phi3 (mini) (แนะนำอยู่แล้ว)</strong>
-                <pre>ollama pull phi3:mini</pre>
-                <p><em>ขนาด: 2.3GB, เหมาะสำหรับผู้เริ่มต้นและเครื่องทั่วไป</em></p>
-            </li>
-
-            <li><strong>Gemma 3n (คุณภาพแปลดี, แม่นยำ)</strong>
+            <li><strong>Gemma 3n (แนะนำอยู่แล้ว)</strong>
                 <pre>ollama pull gemma3n</pre>
                 <p><em>ขนาด: ~2.0GB, คุณภาพการแปลดี แม่นยำ เหมาะสำหรับงานแปลทั่วไป</em></p>
             </li>
@@ -175,7 +162,6 @@
 
         <p><strong>ตัวอย่างการลบ Models:</strong></p>
         <ul>
-            <li>ลบ phi3:mini: <code>ollama rm phi3:mini</code></li>
             <li>ลบ gemma3n: <code>ollama rm gemma3n</code></li>
             <li>ลบ Gemma 3n Unsloth: <code>ollama rm hf.co/unsloth/gemma-3n-E4B-it-GGUF:Q4_K_XL</code></li>
         </ul>
