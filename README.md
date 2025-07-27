@@ -105,14 +105,31 @@ pip install PyQt6 pytesseract Pillow mss keyboard pyperclip ollama
 ### 4. Run the Application
 
 ```bash
-python ScreenTranslator.py
+python main.py
 ```
+
+### 5. Building a Distributable Version
+
+To create a standalone distributable version of the application:
+
+```bash
+# Run the build script
+.\build.bat
+```
+
+This will:
+- Install all required dependencies
+- Create a distributable version in the `dist\ScreenTranslator` directory
+- Include the manual files from the Manual folder
+- Create an `_internal` folder for application resources
+
+The executable can be found at `dist\ScreenTranslator\ScreenTranslator.exe`
 
 ## 🚀 Usage
 
 ### Quick Start
-1. **Launch**: Run `python ScreenTranslator.py`
-2. **Activate**: Press Alt twice quickly or click "📱 Capture Screen Area"
+1. **Launch**: Run `python main.py`
+2. **Activate**: Press Alt twice quickly or click "Capture Screen Area"
 3. **Select**: Click and drag to select text area on screen
 4. **Translate**: Wait for OCR extraction and AI translation
 5. **Copy**: Translation is automatically copied to clipboard
@@ -204,6 +221,31 @@ The application uses a modern dark theme with customizable colors:
 
 ## 🏗️ Architecture
 
+> **Note:** The application has been refactored from a single monolithic file into a modular package structure to improve maintainability and organization. The functionality remains the same, but the code is now better organized and easier to maintain.
+
+### Package Structure
+The application is organized into a modular package structure:
+
+```
+screen_translator/           # Main package
+├── __init__.py              # Package initialization
+├── app.py                   # Main application class and entry point
+├── config.py                # Configuration and settings management
+├── style.py                 # Centralized style management
+├── ui/                      # User interface components
+│   ├── __init__.py
+│   ├── control.py           # Main control window
+│   ├── indicators.py        # Status and copy indicators
+│   ├── overlay.py           # Translation overlay window
+│   ├── selector.py          # Screen area selector
+│   └── settings.py          # Settings dialog
+└── utils/                   # Utility classes
+    ├── __init__.py
+    ├── keyboard.py          # Keyboard event handling
+    ├── ocr.py               # OCR processing
+    └── translation.py       # Translation worker
+```
+
 ### Core Components
 - **ScreenSelector**: Full-screen overlay for area selection
 - **TranslationOverlay**: Floating window for displaying results
@@ -211,12 +253,15 @@ The application uses a modern dark theme with customizable colors:
 - **OCRProcessor**: Handles Tesseract OCR operations
 - **TranslationWorker**: Background thread for AI translation
 - **KeyboardManager**: Global hotkey detection and handling
+- **StyleManager**: Centralized UI styling
+- **Config**: Application configuration
 
 ### Design Patterns
 - **Threading**: Non-blocking UI with background processing
 - **Signals/Slots**: Qt-based event handling
-- **Modular Design**: Separate classes for distinct functionality
+- **Modular Design**: Separate modules for distinct functionality
 - **Configuration Management**: Centralized settings and styling
+- **Package Organization**: Logical grouping of related components
 
 ## 🤝 Contributing
 
