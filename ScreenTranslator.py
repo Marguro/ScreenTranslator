@@ -719,6 +719,7 @@ class TranslationOverlay(QWidget):
             if dialog.exec() == QDialog.DialogCode.Accepted:
                 selected_display_name = dialog.get_selected_model()
                 main_window.current_model = Config.AVAILABLE_MODELS[selected_display_name]
+                main_window._update_model_status()  # Update the model status display
                 print(f"[INFO] Changed model to: {selected_display_name} ({main_window.current_model})")
         else:
             # Fallback if main window not found
@@ -1119,6 +1120,7 @@ class ControlWindow(QMainWindow):
         layout.setSpacing(20)
 
         self._setup_header(layout)
+        self._setup_model_status(layout)
         self._setup_buttons(layout)
         self._setup_footer(layout)
 
@@ -1138,6 +1140,29 @@ class ControlWindow(QMainWindow):
         header_layout.addWidget(title)
         header_layout.addWidget(subtitle)
         layout.addLayout(header_layout)
+
+    def _setup_model_status(self, layout):
+        """Setup current model status display"""
+        # Current model display in single line
+        current_display_name = self._get_current_model_display_name()
+        self.current_model_name = QLabel(f"Current Model: {current_display_name}")
+        self.current_model_name.setStyleSheet("color: #72f9b5; font: 12px 'Segoe UI';")
+        self.current_model_name.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        layout.addWidget(self.current_model_name)
+
+    def _get_current_model_display_name(self):
+        """Get display name for current model"""
+        for display_name, actual_name in Config.AVAILABLE_MODELS.items():
+            if actual_name == self.current_model:
+                return display_name
+        return self.current_model  # Fallback to actual model name
+
+    def _update_model_status(self):
+        """Update the model status display"""
+        if hasattr(self, 'current_model_name'):
+            display_name = self._get_current_model_display_name()
+            self.current_model_name.setText(f"Current Model: {display_name}")
 
     def _setup_buttons(self, layout):
         """Setup action buttons"""
@@ -1278,6 +1303,7 @@ class ControlWindow(QMainWindow):
         if dialog.exec() == QDialog.DialogCode.Accepted:
             selected_display_name = dialog.get_selected_model()
             self.current_model = Config.AVAILABLE_MODELS[selected_display_name]
+            self._update_model_status()  # Update the model status display
             print(f"[INFO] Changed model to: {selected_display_name} ({self.current_model})")
 
     def closeEvent(self, event):
