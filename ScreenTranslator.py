@@ -12,6 +12,7 @@ import pyperclip
 from PIL import Image
 import pytesseract
 import ollama
+import json
 
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
@@ -21,8 +22,6 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QRect, QPoint, QSize, QTimer, pyqtSignal, QThread, QPropertyAnimation, QEasingCurve
 from PyQt6.QtGui import QPalette, QColor, QPainter, QPen, QRegion
 
-from ScreenTranslator_PyQt6 import ControlWindow
-
 
 # =============================================================================
 # CONFIGURATION AND CONSTANTS
@@ -30,7 +29,36 @@ from ScreenTranslator_PyQt6 import ControlWindow
 
 class Config:
     """Application configuration"""
-    TESSERACT_PATH = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+    # Try to find Tesseract automatically on different systems
+    TESSERACT_PATHS = [
+        r'C:\Program Files\Tesseract-OCR\tesseract.exe',  # Windows default
+        r'C:\Program Files (x86)\Tesseract-OCR\tesseract.exe',  # Windows 32-bit
+        '/usr/bin/tesseract',  # Linux
+        '/usr/local/bin/tesseract',  # Linux/macOS homebrew
+        '/opt/homebrew/bin/tesseract',  # macOS Apple Silicon
+        'tesseract'  # Try system PATH
+    ]
+
+    @classmethod
+    def get_tesseract_path(cls):
+        """Find the correct Tesseract path for current system"""
+        import shutil
+
+        # First try the predefined paths
+        for path in cls.TESSERACT_PATHS:
+            if os.path.exists(path):
+                return path
+
+        # If none found, try to find in system PATH
+        tesseract_path = shutil.which('tesseract')
+        if tesseract_path:
+            return tesseract_path
+
+        # If still not found, return None
+        return None
+
+    # Set TESSERACT_PATH - will be initialized after class creation
+    TESSERACT_PATH = None
     ALT_DOUBLE_PRESS_THRESHOLD = 0.5  # seconds
 
     # Model configurations
@@ -53,6 +81,55 @@ class Config:
     # Default font settings
     DEFAULT_FONT_SIZE = 16
 
+    # Settings file path
+    SETTINGS_FILE = os.path.join(os.path.expanduser("~"), ".screen_translator_settings.json")
+
+    @classmethod
+    def load_settings(cls):
+        """Load settings from file"""
+        try:
+            if os.path.exists(cls.SETTINGS_FILE):
+                with open(cls.SETTINGS_FILE, 'r', encoding='utf-8') as f:
+                    settings = json.load(f)
+
+                # Apply loaded settings
+                if 'default_font_size' in settings:
+                    cls.DEFAULT_FONT_SIZE = settings['default_font_size']
+
+                return settings
+        except Exception as e:
+            print(f"Error loading settings: {e}")
+        return {}
+
+    @classmethod
+    def save_settings(cls, current_model=None, font_size=None):
+        """Save current settings to file"""
+        try:
+            settings = {}
+
+            # Load existing settings first
+            if os.path.exists(cls.SETTINGS_FILE):
+                try:
+                    with open(cls.SETTINGS_FILE, 'r', encoding='utf-8') as f:
+                        settings = json.load(f)
+                except:
+                    settings = {}
+
+            # Update with new values
+            if current_model is not None:
+                settings['current_model'] = current_model
+            if font_size is not None:
+                settings['default_font_size'] = font_size
+                cls.DEFAULT_FONT_SIZE = font_size
+
+            # Save to file
+            with open(cls.SETTINGS_FILE, 'w', encoding='utf-8') as f:
+                json.dump(settings, f, indent=2, ensure_ascii=False)
+
+            print(f"Settings saved to {cls.SETTINGS_FILE}")
+        except Exception as e:
+            print(f"Error saving settings: {e}")
+
     @staticmethod
     def get_model_options(model_name):
         """Get specific options for each model"""
@@ -73,6 +150,9 @@ class Config:
 # =============================================================================
 # STYLING AND THEMES
 # =============================================================================
+
+# Initialize Config.TESSERACT_PATH after class definition
+Config.TESSERACT_PATH = Config.get_tesseract_path()
 
 class StyleManager:
     """Centralized style management"""
@@ -1193,8 +1273,18 @@ class SettingsDialog(QDialog):
 
     def _save_all_settings(self):
         """Save all settings including model and font size"""
+        # Get selected model
+        selected_display_name = self.get_selected_model()
+        selected_model = Config.AVAILABLE_MODELS[selected_display_name]
+
         # Apply font settings first
         self._apply_font_settings()
+
+        # Save settings to file
+        Config.save_settings(
+            current_model=selected_model,
+            font_size=self.current_font_size
+        )
 
         # Then accept the dialog (which will handle model changes)
         self.accept()
@@ -1317,6 +1407,31 @@ class ControlWindow(QMainWindow):
         self._setup_window()
         self._setup_ui()
         self._center_on_screen()
+
+        # Load settings on startup
+        self._load_settings()
+
+    def closeEvent(self, event):
+        """Handle application close event and save settings"""
+        try:
+            # Save current settings before closing
+            Config.save_settings(
+                current_model=self.current_model,
+                font_size=Config.DEFAULT_FONT_SIZE
+            )
+            print("[INFO] Settings saved on application close")
+        except Exception as e:
+            print(f"[ERROR] Failed to save settings on close: {e}")
+
+        # Clean up resources
+        if self.translation_overlay:
+            self.translation_overlay.close()
+        if self.screen_selector:
+            self.screen_selector.close()
+        if self.keyboard_manager:
+            self.keyboard_manager.cleanup()
+
+        event.accept()
 
     def _setup_window(self):
         """Configure main window"""
@@ -1517,14 +1632,50 @@ class ControlWindow(QMainWindow):
             selected_display_name = dialog.get_selected_model()
             self.current_model = Config.AVAILABLE_MODELS[selected_display_name]
             self._update_model_status()  # Update the model status display
+
+            # Settings are already saved by the dialog's _save_all_settings method
+            # so we don't need to save again here
+
             print(f"[INFO] Changed model to: {selected_display_name} ({self.current_model})")
 
     def closeEvent(self, event):
         """Handle application closing"""
+        # Save current settings before closing
+        try:
+            Config.save_settings(
+                current_model=self.current_model,
+                font_size=getattr(self, 'current_font_size', Config.DEFAULT_FONT_SIZE)
+            )
+            print("[INFO] Settings saved before closing")
+        except Exception as e:
+            print(f"[WARNING] Failed to save settings: {e}")
+
         self.keyboard_manager.cleanup()
         if self.translation_overlay:
             self.translation_overlay.close()
         event.accept()
+
+    def _load_settings(self):
+        """Load settings from file and apply to the application"""
+        settings = Config.load_settings()
+
+        # Apply settings to controls
+        if 'current_model' in settings:
+            self.current_model = settings['current_model']
+            self._update_model_status()
+
+        if 'default_font_size' in settings:
+            font_size = settings['default_font_size']
+            Config.DEFAULT_FONT_SIZE = font_size
+
+            # Update font size in settings dialog if open
+            for widget in QApplication.topLevelWidgets():
+                if isinstance(widget, SettingsDialog):
+                    widget.current_font_size = font_size
+                    widget.font_size_display.setText(f"{font_size} px")
+                    break
+
+        print(f"[INFO] Settings loaded: {settings}")
 
 
 # =============================================================================
