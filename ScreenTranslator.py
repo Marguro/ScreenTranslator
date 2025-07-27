@@ -16,10 +16,12 @@ import ollama
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLabel, QTextEdit, QComboBox, QFrame, QDialog,
-    QMessageBox, QRubberBand, QSizePolicy
+    QMessageBox, QRubberBand, QSizePolicy, QSpinBox
 )
 from PyQt6.QtCore import Qt, QRect, QPoint, QSize, QTimer, pyqtSignal, QThread, QPropertyAnimation, QEasingCurve
 from PyQt6.QtGui import QPalette, QColor, QPainter, QPen, QRegion
+
+from ScreenTranslator_PyQt6 import ControlWindow
 
 
 # =============================================================================
@@ -44,6 +46,12 @@ class Config:
     OVERLAY_HEIGHT = 200
     CONTROL_WINDOW_WIDTH = 300
     CONTROL_WINDOW_HEIGHT = 350
+
+    # Font settings for translation overlay
+    FONT_SIZES = [8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20, 22, 24, 28, 32, 36, 48]
+
+    # Default font settings
+    DEFAULT_FONT_SIZE = 16
 
     @staticmethod
     def get_model_options(model_name):
@@ -927,8 +935,8 @@ class SettingsDialog(QDialog):
         # Model selection
         self._setup_model_selection(layout)
 
-        # Status section
-        self._setup_status_section(layout)
+        # Font customization section
+        self._setup_font_section(layout)
 
         layout.addStretch()
 
@@ -1000,28 +1008,140 @@ class SettingsDialog(QDialog):
         layout.addWidget(model_label)
         layout.addWidget(self.model_combo)
 
-    def _setup_status_section(self, layout):
-        """Setup connection status section"""
-        status_label = QLabel("📊 Connection Status:")
-        status_label.setStyleSheet("color: #cdd6f4; font: bold 13px 'Segoe UI'; margin-top: 5px;")
+    def _setup_font_section(self, layout):
+        """Setup font customization section"""
+        font_label = QLabel("🔤 Font Customization:")
+        font_label.setStyleSheet("color: #cdd6f4; font: bold 13px 'Segoe UI'; margin-top: 5px;")
 
-        self.status_text = QLabel("Checking Ollama status...")
-        self.status_text.setStyleSheet("""
+        # Create a horizontal layout for font controls
+        font_controls_layout = QHBoxLayout()
+        font_controls_layout.setSpacing(10)
+
+        # Font size label with icon - positioned on the left
+        size_label = QLabel("Size:")
+        size_label.setStyleSheet("""
+            QLabel {
+                color: #89b4fa;
+                font: bold 12px 'Segoe UI';
+                padding: 5px;
+            }
+        """)
+
+        # Add the size label to the left
+        font_controls_layout.addWidget(size_label)
+
+        # Add stretch to push the controls to the right
+        font_controls_layout.addStretch()
+
+        # Create a container for the font size display controls (right side)
+        font_display_container = QHBoxLayout()
+        font_display_container.setSpacing(8)
+
+        # Font size display (same style as model combo)
+        self.font_size_display = QLabel(f"{Config.DEFAULT_FONT_SIZE} px")
+        self.font_size_display.setStyleSheet("""
             QLabel {
                 background-color: #45475a;
                 color: #cdd6f4;
                 font: 12px 'Segoe UI';
-                padding: 10px;
+                padding: 13px 6px;
+                border: none;
                 border-radius: 5px;
-                min-height: 50px;
+                min-height: 16px;
+                max-height: 16px;
+                min-width: 50px;
             }
         """)
-        self.status_text.setWordWrap(True)
+        self.font_size_display.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        layout.addWidget(status_label)
-        layout.addWidget(self.status_text)
+        # Create up/down arrow buttons
+        self.font_size_up_btn = QPushButton("▲")
+        self.font_size_up_btn.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #89b4fa, stop:1 #74c7ec);
+                color: #1e1e2e;
+                font: bold 10px 'Segoe UI';
+                border: none;
+                border-radius: 3px;
+                min-width: 20px;
+                max-width: 20px;
+                min-height: 20px;
+                max-height: 20px;
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #a6d4ff, stop:1 #89b4fa);
+            }
+            QPushButton:pressed {
+                background: #6fa8dc;
+            }
+        """)
 
-        self._check_ollama_status()
+        self.font_size_down_btn = QPushButton("▼")
+        self.font_size_down_btn.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #74c7ec, stop:1 #89b4fa);
+                color: #1e1e2e;
+                font: bold 10px 'Segoe UI';
+                border: none;
+                border-radius: 3px;
+                min-width: 20px;
+                max-width: 20px;
+                min-height: 20px;
+                max-height: 20px;
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #89b4fa, stop:1 #a6d4ff);
+            }
+            QPushButton:pressed {
+                background: #6fa8dc;
+            }
+        """)
+
+        # Connect button signals
+        # noinspection PyUnresolvedReferences
+        self.font_size_up_btn.clicked.connect(self._increase_font_size)
+        # noinspection PyUnresolvedReferences
+        self.font_size_down_btn.clicked.connect(self._decrease_font_size)
+
+        # Store current font size
+        self.current_font_size = Config.DEFAULT_FONT_SIZE
+
+        # Create vertical layout for arrow buttons
+        arrow_layout = QVBoxLayout()
+        arrow_layout.setSpacing(2)
+        arrow_layout.setContentsMargins(0, 0, 0, 0)
+        arrow_layout.addWidget(self.font_size_up_btn)
+        arrow_layout.addWidget(self.font_size_down_btn)
+
+        # Add font display and arrow buttons to the display container
+        font_display_container.addWidget(self.font_size_display)
+        font_display_container.addLayout(arrow_layout)
+
+        # Add the display container to the main layout
+        font_controls_layout.addLayout(font_display_container)
+
+        layout.addWidget(font_label)
+        layout.addLayout(font_controls_layout)
+
+    def _increase_font_size(self):
+        """Increase font size"""
+        if self.current_font_size < 48:  # Max size
+            self.current_font_size += 1
+            self._update_font_display()
+
+    def _decrease_font_size(self):
+        """Decrease font size"""
+        if self.current_font_size > 8:  # Min size
+            self.current_font_size -= 1
+            self._update_font_display()
+
+    def _update_font_display(self):
+        """Update the font size display"""
+        self.font_size_display.setText(f"{self.current_font_size} px")
 
     def _setup_buttons(self, layout):
         """Setup dialog buttons"""
@@ -1038,12 +1158,20 @@ class SettingsDialog(QDialog):
         save_btn = QPushButton("💾 Save Settings")
         save_btn.setStyleSheet(StyleManager.get_button_style("#89b4fa", "#74c7ec", "#1e1e2e"))
         # noinspection PyUnresolvedReferences
-        save_btn.clicked.connect(self.accept)
+        save_btn.clicked.connect(self._save_all_settings)
         save_btn.setMinimumSize(150, 40)
 
         button_layout.addWidget(cancel_btn)
         button_layout.addWidget(save_btn)
         layout.addLayout(button_layout)
+
+    def _save_all_settings(self):
+        """Save all settings including model and font size"""
+        # Apply font settings first
+        self._apply_font_settings()
+
+        # Then accept the dialog (which will handle model changes)
+        self.accept()
 
     def _find_display_name(self):
         """Find display name for current model"""
@@ -1051,28 +1179,6 @@ class SettingsDialog(QDialog):
             if actual_name == self.current_model:
                 return display_name
         return None
-
-    def _check_ollama_status(self):
-        """Check Ollama connection status"""
-        try:
-            models = ollama.list().get('models', [])
-            status_text = f"✅ Connected successfully!\nFound {len(models)} available models."
-            color = "#a6e3a1"
-        except Exception as e:
-            status_text = f"❌ Connection failed\n{str(e)[:80]}...\n\nPlease ensure Ollama is installed and running."
-            color = "#f38ba8"
-
-        self.status_text.setText(status_text)
-        self.status_text.setStyleSheet(f"""
-            QLabel {{
-                background-color: #45475a;
-                color: {color};
-                font: 12px 'Segoe UI';
-                padding: 10px;
-                border-radius: 5px;
-                min-height: 50px;
-            }}
-        """)
 
     def _center_on_screen(self):
         """Center dialog on screen"""
@@ -1084,6 +1190,88 @@ class SettingsDialog(QDialog):
     def get_selected_model(self):
         """Get the selected model name"""
         return self.model_combo.currentText()
+
+    def _apply_font_settings(self):
+        """Apply the selected font settings"""
+        selected_size = self.current_font_size  # Use the custom font size instead of spinbox
+
+        # Update the configuration (this could be saved to a file or applied globally)
+        Config.DEFAULT_FONT_SIZE = selected_size
+
+        # Update the translation overlay if it's open
+        if self.parent() and hasattr(self.parent(), 'translation_text'):
+            # Apply new font size to the translation text area specifically
+            self.parent().translation_text.setStyleSheet(f"""
+                QTextEdit {{
+                    background: rgba(49, 50, 68, 0.6);
+                    color: #cdd6f4;
+                    font: {selected_size}px 'Segoe UI';
+                    border: 1px solid rgba(137, 180, 250, 0.2);
+                    border-radius: 10px;
+                    padding: 12px;
+                    selection-background-color: #89b4fa;
+                    selection-color: #1e1e2e;
+                }}
+                QTextEdit:focus {{
+                    border: 1px solid rgba(137, 180, 250, 0.4);
+                }}
+                QScrollBar:vertical {{
+                    background: rgba(69, 71, 90, 0.5);
+                    width: 8px;
+                    border-radius: 4px;
+                    margin: 0px;
+                }}
+                QScrollBar::handle:vertical {{
+                    background: rgba(137, 180, 250, 0.6);
+                    border-radius: 4px;
+                    min-height: 20px;
+                }}
+                QScrollBar::handle:vertical:hover {{
+                    background: rgba(137, 180, 250, 0.8);
+                }}
+                QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+                    height: 0px;
+                }}
+            """)
+        else:
+            # Try to find the translation overlay globally
+            for widget in QApplication.topLevelWidgets():
+                if isinstance(widget, TranslationOverlay) and hasattr(widget, 'translation_text'):
+                    widget.translation_text.setStyleSheet(f"""
+                        QTextEdit {{
+                            background: rgba(49, 50, 68, 0.6);
+                            color: #cdd6f4;
+                            font: {selected_size}px 'Segoe UI';
+                            border: 1px solid rgba(137, 180, 250, 0.2);
+                            border-radius: 10px;
+                            padding: 12px;
+                            selection-background-color: #89b4fa;
+                            selection-color: #1e1e2e;
+                        }}
+                        QTextEdit:focus {{
+                            border: 1px solid rgba(137, 180, 250, 0.4);
+                        }}
+                        QScrollBar:vertical {{
+                            background: rgba(69, 71, 90, 0.5);
+                            width: 8px;
+                            border-radius: 4px;
+                            margin: 0px;
+                        }}
+                        QScrollBar::handle:vertical {{
+                            background: rgba(137, 180, 250, 0.6);
+                            border-radius: 4px;
+                            min-height: 20px;
+                        }}
+                        QScrollBar::handle:vertical:hover {{
+                            background: rgba(137, 180, 250, 0.8);
+                        }}
+                        QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+                            height: 0px;
+                        }}
+                    """)
+                    break
+
+        print(f"[INFO] Font settings applied: Size: {selected_size}")
 
 
 class ControlWindow(QMainWindow):
