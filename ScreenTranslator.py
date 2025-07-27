@@ -157,7 +157,7 @@ class StyleManager:
             QTextEdit {
                 background: rgba(49, 50, 68, 0.6);
                 color: #cdd6f4;
-                font: 13px 'Segoe UI';
+                font: 16px 'Segoe UI';
                 border: 1px solid rgba(137, 180, 250, 0.2);
                 border-radius: 10px;
                 padding: 12px;
@@ -218,6 +218,7 @@ class TranslationWorker(QThread):
         try:
             prompt = (
                 f'Translate English to Thai, only provide Thai translation:\n'
+                f"Provide ONLY the Thai translation, NOTHING ELSE. Do NOT explain or add any other text.\n"
                 f'"{self.text}"\n\nThai Translation:'
             )
 
@@ -587,14 +588,15 @@ class TranslationOverlay(QWidget):
         icon_label = QLabel("🌐")
         icon_label.setStyleSheet("font-size: 18px; color: #89b4fa;")
 
-        title_label = QLabel("Translation")
-        title_label.setStyleSheet("color: #cdd6f4; font: bold 14px 'Segoe UI';")
+        # Store reference to title label for easy updates
+        self.title_label = QLabel("Translation")
+        self.title_label.setStyleSheet("color: #cdd6f4; font: bold 14px 'Segoe UI';")
 
         drag_hint = QLabel("• • •")
         drag_hint.setStyleSheet("color: rgba(205, 214, 244, 0.5); font: bold 12px 'Segoe UI';")
 
         title_layout.addWidget(icon_label)
-        title_layout.addWidget(title_label)
+        title_layout.addWidget(self.title_label)
         title_layout.addWidget(drag_hint)
 
         header_layout.addLayout(title_layout)
@@ -698,11 +700,15 @@ class TranslationOverlay(QWidget):
         self.slide_animation.start()
         self.scale_animation.start()
 
-    def update_text(self, text):
+    def update_text(self, text, current_model=None):
         """Update translation text and copy to clipboard"""
         self.translation_text.setPlainText(text)
         pyperclip.copy(text)
         self.copy_indicator.show_briefly()
+
+        # Update model display in header if provided
+        if current_model:
+            self._update_model_display(current_model)
 
         # Update status based on content
         if text.startswith("กำลัง"):
@@ -711,6 +717,22 @@ class TranslationOverlay(QWidget):
             self.status_indicator.update_status("Error", 'error')
         else:
             self.status_indicator.update_status("Completed", 'success')
+
+    def _update_model_display(self, current_model):
+        """Update the model display in header"""
+        # Get display name for the model
+        display_name = None
+        for name, model in Config.AVAILABLE_MODELS.items():
+            if model == current_model:
+                display_name = name
+                break
+
+        if not display_name:
+            display_name = current_model
+
+        # Update the title label directly using stored reference
+        if hasattr(self, 'title_label'):
+            self.title_label.setText(f"Translation • {display_name}")
 
     def _show_settings(self):
         """Show settings dialog"""
@@ -728,6 +750,10 @@ class TranslationOverlay(QWidget):
                 selected_display_name = dialog.get_selected_model()
                 main_window.current_model = Config.AVAILABLE_MODELS[selected_display_name]
                 main_window._update_model_status()  # Update the model status display
+
+                # Update the overlay header immediately
+                self._update_model_display(main_window.current_model)
+
                 print(f"[INFO] Changed model to: {selected_display_name} ({main_window.current_model})")
         else:
             # Fallback if main window not found
@@ -1450,7 +1476,7 @@ class ControlWindow(QMainWindow):
             self.translation_overlay.raise_()
             self.translation_overlay.activateWindow()
 
-        self.translation_overlay.update_text("กำลังสกัดข้อความจากภาพ...")
+        self.translation_overlay.update_text("กำลังสกัดข้อความจากภาพ...", self.current_model)
         QTimer.singleShot(300, lambda: self._capture_and_process(x, y, width, height))
 
     def _capture_and_process(self, x, y, width, height):
@@ -1463,7 +1489,7 @@ class ControlWindow(QMainWindow):
             print(f"[INFO] Captured Text: '{captured_text}'")
 
             if captured_text and not captured_text.startswith("ERROR:"):
-                self.translation_overlay.update_text("กำลังแปล...")
+                self.translation_overlay.update_text("กำลังแปล...", self.current_model)
 
                 # Start translation in background
                 self.translation_worker = TranslationWorker(captured_text, self.current_model)
@@ -1472,17 +1498,16 @@ class ControlWindow(QMainWindow):
                 self.translation_worker.start()
             else:
                 error_msg = captured_text if captured_text.startswith("ERROR:") else "ไม่พบข้อความที่จะแปล หรือการดึงข้อความล้มเหลว"
-                self.translation_overlay.update_text(error_msg)
-
+                self.translation_overlay.update_text(error_msg, self.current_model)
         except Exception as e:
             print(f"Error in capture_and_process: {e}")
             if self.translation_overlay:
-                self.translation_overlay.update_text(f"เกิดข้อผิดพลาด: {str(e)}")
+                self.translation_overlay.update_text(f"เกิดข้อผิดพลาด: {str(e)}", self.current_model)
 
     def _on_translation_finished(self, translated_text):
         """Handle translation completion"""
         if self.translation_overlay:
-            self.translation_overlay.update_text(translated_text)
+            self.translation_overlay.update_text(translated_text, self.current_model)
         print(f"[INFO] Translated Text: '{translated_text}'")
 
     def show_settings(self):
