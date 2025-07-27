@@ -66,7 +66,7 @@ class Config:
         "Gemma 3n": "gemma3n",
         "Gemma 3n (Unsloth)": "hf.co/unsloth/gemma-3n-E4B-it-GGUF:Q4_K_XL",
         #"qwen3": "qwen3:4b",
-        "phi3 (mini)": "phi3:mini"
+        #"phi3.5": "phi3.5:latest"
     }
 
     # Window settings
