@@ -1,0 +1,440 @@
+﻿import pyperclip
+from PyQt6.QtWidgets import (
+    QWidget, QApplication, QVBoxLayout, QHBoxLayout, QFrame, QLabel, 
+    QPushButton, QTextEdit, QDialog, QSizePolicy
+)
+from PyQt6.QtCore import Qt, QPoint, QRect, QSize, QTimer, QPropertyAnimation, QEasingCurve
+from PyQt6.QtGui import QColor, QPainter, QPen
+
+from src.config import Config
+from src.utils import StyleManager
+from src.ui import StatusIndicator, CopyIndicator
+
+# Use lazy imports to avoid circular dependencies
+def get_settings_dialog():
+    from src.ui.settings_dialog import SettingsDialog
+    return SettingsDialog
+
+def get_control_window():
+    from src.ui.control_window import ControlWindow
+    return ControlWindow
+
+class TranslationOverlay(QWidget):
+    """Modern floating translation window"""
+
+    def __init__(self):
+        super().__init__()
+        self._setup_window()
+        self._setup_variables()
+        self.setup_ui()
+        self._setup_animations()
+
+    def _setup_window(self):
+        """Configure window properties"""
+        self.setWindowFlags(
+            Qt.WindowType.FramelessWindowHint |
+            Qt.WindowType.WindowStaysOnTopHint
+        )
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+
+        # Position near top-right corner
+        screen = QApplication.primaryScreen().geometry()
+        self.resize(Config.OVERLAY_WIDTH, Config.OVERLAY_HEIGHT)
+        self.move(screen.width() - Config.OVERLAY_WIDTH - 20, 50)
+
+    def _setup_variables(self):
+        """Initialize instance variables"""
+        # Drag functionality
+        self.drag_start_position = None
+        self.is_dragging = False
+
+        # Resize functionality
+        self.resize_start_position = None
+        self.resize_start_geometry = None
+        self.is_resizing = False
+        self.resize_edge = None
+        self.resize_margin = 15
+
+    def setup_ui(self):
+        """Setup the user interface"""
+        # Main container
+        self.main_frame = QFrame(self)
+        self.main_frame.setStyleSheet(StyleManager.get_overlay_style())
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self.main_frame)
+
+        # Inner layout
+        inner_layout = QVBoxLayout(self.main_frame)
+        inner_layout.setContentsMargins(20, 15, 20, 15)
+        inner_layout.setSpacing(12)
+
+        # Setup sections
+        self._setup_header(inner_layout)
+        self._setup_content(inner_layout)
+        self._setup_footer(inner_layout)
+
+    def _setup_header(self, layout):
+        """Setup header with title and controls"""
+        self.header_frame = QFrame()
+        self.header_frame.setStyleSheet("QFrame { background: transparent; border: none; }")
+        self.header_frame.setFixedHeight(40)
+        self.header_frame.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+
+        header_layout = QHBoxLayout(self.header_frame)
+        header_layout.setContentsMargins(0, 0, 0, 0)
+        header_layout.setSpacing(10)
+
+        # Title section
+        title_layout = QHBoxLayout()
+        title_layout.setSpacing(8)
+
+        icon_label = QLabel("🌐")
+        icon_label.setStyleSheet("font-size: 18px; color: #89b4fa;")
+
+        # Store reference to title label for easy updates
+        self.title_label = QLabel("Translation")
+        self.title_label.setStyleSheet("color: #cdd6f4; font: bold 14px 'Segoe UI';")
+
+        drag_hint = QLabel("• • •")
+        drag_hint.setStyleSheet("color: rgba(205, 214, 244, 0.5); font: bold 12px 'Segoe UI';")
+
+        title_layout.addWidget(icon_label)
+        title_layout.addWidget(self.title_label)
+        title_layout.addWidget(drag_hint)
+
+        header_layout.addLayout(title_layout)
+        header_layout.addStretch()
+
+        # Control buttons
+        self._setup_control_buttons(header_layout)
+        layout.addWidget(self.header_frame)
+
+    def _setup_control_buttons(self, layout):
+        """Setup settings and close buttons"""
+        # Settings button
+        settings_btn = QPushButton("⚙️")
+        settings_btn.setStyleSheet(StyleManager.get_icon_button_style('primary'))
+        settings_btn.setToolTip("Settings")
+        # noinspection PyUnresolvedReferences
+        settings_btn.clicked.connect(self._show_settings)
+
+        # Close button
+        close_btn = QPushButton("✕")
+        close_btn.setStyleSheet(StyleManager.get_icon_button_style('secondary'))
+        # noinspection PyUnresolvedReferences
+        close_btn.clicked.connect(self.close)
+
+        layout.addWidget(settings_btn)
+        layout.addWidget(close_btn)
+
+    def _setup_content(self, layout):
+        """Setup content area"""
+        self.translation_text = QTextEdit()
+        self.translation_text.setStyleSheet(StyleManager.get_text_edit_style())
+        self.translation_text.setReadOnly(True)
+        self.translation_text.setMinimumHeight(60)
+        self.translation_text.setMaximumHeight(1500)
+        layout.addWidget(self.translation_text)
+
+    def _setup_footer(self, layout):
+        """Setup footer with status indicators"""
+        self.footer_frame = QFrame()
+        self.footer_frame.setStyleSheet("QFrame { background: transparent; border: none; }")
+        self.footer_frame.setFixedHeight(30)
+        self.footer_frame.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+
+        footer_layout = QHBoxLayout(self.footer_frame)
+        footer_layout.setContentsMargins(0, 0, 0, 0)
+        footer_layout.setSpacing(10)
+
+        # Status and copy indicators
+        self.status_indicator = StatusIndicator()
+        self.copy_indicator = CopyIndicator()
+
+        footer_layout.addWidget(self.status_indicator)
+        footer_layout.addStretch()
+        footer_layout.addWidget(self.copy_indicator)
+        layout.addWidget(self.footer_frame)
+
+    def _setup_animations(self):
+        """Setup entrance animations"""
+        # เริ่มต้นด้วยการซ่อน widget
+        self.setWindowOpacity(0.0)
+
+        # เก็บตำแหน่งเดิมไว้
+        self.original_pos = self.pos()
+
+        # ตั้งตำแหน่งเริ่มต้นสำหรับ slide animation
+        start_pos = QPoint(self.original_pos.x(), self.original_pos.y() - 30)
+        self.move(start_pos)
+
+        # Fade-in animation (ใช้ window opacity แทน graphics effect)
+        self.fade_animation = QPropertyAnimation(self, b"windowOpacity")
+        self.fade_animation.setDuration(400)
+        self.fade_animation.setStartValue(0.0)
+        self.fade_animation.setEndValue(1.0)
+        self.fade_animation.setEasingCurve(QEasingCurve.Type.OutCubic)
+
+        # Slide-in animation
+        self.slide_animation = QPropertyAnimation(self, b"pos")
+        self.slide_animation.setDuration(400)
+        self.slide_animation.setStartValue(start_pos)
+        self.slide_animation.setEndValue(self.original_pos)
+        self.slide_animation.setEasingCurve(QEasingCurve.Type.OutCubic)
+
+        # Scale animation สำหรับเอฟเฟค "pop-in"
+        self.scale_animation = QPropertyAnimation(self, b"size")
+        self.scale_animation.setDuration(400)
+
+        # เริ่มจากขนาดเล็กกว่าเล็กน้อย
+        start_size = QSize(int(self.width() * 0.95), int(self.height() * 0.95))
+        end_size = self.size()
+
+        self.scale_animation.setStartValue(start_size)
+        self.scale_animation.setEndValue(end_size)
+        self.scale_animation.setEasingCurve(QEasingCurve.Type.OutBack)
+
+        # เริ่มอนิเมชันพร้อมกัน
+        QTimer.singleShot(50, self._start_animations)
+
+    def _start_animations(self):
+        """เริ่มอนิเมชันทั้งหมด"""
+        self.fade_animation.start()
+        self.slide_animation.start()
+        self.scale_animation.start()
+
+    def update_text(self, text, current_model=None):
+        """Update translation text and copy to clipboard"""
+        self.translation_text.setPlainText(text)
+        pyperclip.copy(text)
+        self.copy_indicator.show_briefly()
+
+        # Update model display in header if provided
+        if current_model:
+            self._update_model_display(current_model)
+
+        # Update status based on content
+        if text.startswith("กำลัง"):
+            self.status_indicator.update_status("Processing...", 'warning')
+        elif text.startswith("Translation Error"):
+            self.status_indicator.update_status("Error", 'error')
+        else:
+            self.status_indicator.update_status("Completed", 'success')
+
+    def _update_model_display(self, current_model):
+        """Update the model display in header"""
+        # Get display name for the model
+        display_name = None
+        for name, model in Config.AVAILABLE_MODELS.items():
+            if model == current_model:
+                display_name = name
+                break
+
+        if not display_name:
+            display_name = current_model
+
+        # Update the title label directly using stored reference
+        if hasattr(self, 'title_label'):
+            self.title_label.setText(f"Translation • {display_name}")
+
+    def _show_settings(self):
+        """Show settings dialog"""
+        # Get the main window to access current model and settings
+        main_window = None
+        ControlWindow = get_control_window()
+        for widget in QApplication.topLevelWidgets():
+            if isinstance(widget, ControlWindow):
+                main_window = widget
+                break
+
+        if main_window:
+            # Create and show settings dialog
+            SettingsDialog = get_settings_dialog()
+            dialog = SettingsDialog(main_window.current_model, self)
+            if dialog.exec() == QDialog.DialogCode.Accepted:
+                selected_display_name = dialog.get_selected_model()
+                main_window.current_model = Config.AVAILABLE_MODELS[selected_display_name]
+                main_window._update_model_status()  # Update the model status display
+
+                # Update the overlay header immediately
+                self._update_model_display(main_window.current_model)
+
+                print(f"[INFO] Changed model to: {selected_display_name} ({main_window.current_model})")
+        else:
+            # Fallback if main window not found
+            SettingsDialog = get_settings_dialog()
+            dialog = SettingsDialog(list(Config.AVAILABLE_MODELS.values())[0], self)
+            dialog.exec()
+
+    # Mouse event handlers for drag and resize functionality
+    def mousePressEvent(self, event):
+        """Handle mouse press for dragging and resizing"""
+        if event.button() == Qt.MouseButton.LeftButton:
+            click_pos = event.position().toPoint()
+
+            # Check for resize edge first
+            resize_edge = self._get_resize_edge(click_pos)
+            if resize_edge:
+                self.is_resizing = True
+                self.resize_edge = resize_edge
+                self.resize_start_position = event.globalPosition().toPoint()
+                self.resize_start_geometry = self.geometry()
+                return
+
+            # Check if click is on header for dragging
+            header_rect = self.header_frame.geometry()
+            if header_rect.contains(click_pos):
+                self.is_dragging = True
+                self.drag_start_position = event.globalPosition().toPoint() - self.pos()
+
+    def mouseMoveEvent(self, event):
+        """Handle mouse move for dragging and resizing"""
+        if self.is_resizing:
+            self._perform_resize(event.globalPosition().toPoint())
+        elif self.is_dragging and self.drag_start_position is not None:
+            new_pos = event.globalPosition().toPoint() - self.drag_start_position
+            self.move(new_pos)
+
+    def mouseReleaseEvent(self, event):
+        """Handle mouse release"""
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.is_dragging = False
+            self.is_resizing = False
+            self.drag_start_position = None
+            self.resize_start_position = None
+            self.resize_start_geometry = None
+            self.resize_edge = None
+
+    def _get_resize_edge(self, pos):
+        """Determine which edge/corner is being clicked for resizing"""
+        rect = self.rect()
+        margin = self.resize_margin
+
+        # Check corners first
+        if pos.x() <= margin and pos.y() <= margin:
+            return "top-left"
+        elif pos.x() >= rect.width() - margin and pos.y() <= margin:
+            return "top-right"
+        elif pos.x() <= margin and pos.y() >= rect.height() - margin:
+            return "bottom-left"
+        elif pos.x() >= rect.width() - margin and pos.y() >= rect.height() - margin:
+            return "bottom-right"
+        # Check edges
+        elif pos.y() <= margin:
+            return "top"
+        elif pos.y() >= rect.height() - margin:
+            return "bottom"
+        elif pos.x() <= margin:
+            return "left"
+        elif pos.x() >= rect.width() - margin:
+            return "right"
+
+        return None
+
+    def _perform_resize(self, global_pos):
+        """Perform the actual resizing based on the edge being dragged"""
+        if not self.is_resizing or not self.resize_edge:
+            return
+
+        diff = global_pos - self.resize_start_position
+        original_geometry = self.resize_start_geometry
+
+        new_x = original_geometry.x()
+        new_y = original_geometry.y()
+        new_width = original_geometry.width()
+        new_height = original_geometry.height()
+
+        # Apply resize based on edge
+        if "left" in self.resize_edge:
+            new_x = original_geometry.x() + diff.x()
+            new_width = original_geometry.width() - diff.x()
+        elif "right" in self.resize_edge:
+            new_width = original_geometry.width() + diff.x()
+
+        if "top" in self.resize_edge:
+            new_y = original_geometry.y() + diff.y()
+            new_height = original_geometry.height() - diff.y()
+        elif "bottom" in self.resize_edge:
+            new_height = original_geometry.height() + diff.y()
+
+        # Apply size constraints
+        min_width, min_height = 500, 150
+        max_width, max_height = 1200, 1500
+
+        # Get screen boundaries
+        screen_rect = QApplication.primaryScreen().geometry()
+        screen_left = screen_rect.left()
+        screen_top = screen_rect.top()
+        screen_right = screen_rect.right()
+        screen_bottom = screen_rect.bottom()
+
+        # Apply width constraints and position limits
+        if new_width < min_width:
+            if "left" in self.resize_edge:
+                # Don't allow the window to shrink beyond min_width
+                new_x = original_geometry.right() - min_width
+                new_width = min_width
+            else:
+                new_width = min_width
+        elif new_width > max_width:
+            if "left" in self.resize_edge:
+                new_x = original_geometry.right() - max_width
+                new_width = max_width
+            else:
+                new_width = max_width
+
+        # Apply height constraints and position limits
+        if new_height < min_height:
+            if "top" in self.resize_edge:
+                # Don't allow the window to shrink beyond min_height
+                new_y = original_geometry.bottom() - min_height
+                new_height = min_height
+            else:
+                new_height = min_height
+        elif new_height > max_height:
+            if "top" in self.resize_edge:
+                new_y = original_geometry.bottom() - max_height
+                new_height = max_height
+            else:
+                new_height = max_height
+
+        # Prevent window from going outside screen boundaries
+        # Left boundary check
+        if new_x < screen_left:
+            if "left" in self.resize_edge:
+                # Adjust width to compensate for position constraint
+                new_width = new_width - (screen_left - new_x)
+                new_x = screen_left
+            else:
+                new_x = screen_left
+
+        # Top boundary check
+        if new_y < screen_top:
+            if "top" in self.resize_edge:
+                # Adjust height to compensate for position constraint
+                new_height = new_height - (screen_top - new_y)
+                new_y = screen_top
+            else:
+                new_y = screen_top
+
+        # Right boundary check
+        if new_x + new_width > screen_right:
+            if "right" in self.resize_edge:
+                new_width = screen_right - new_x
+            else:
+                new_x = screen_right - new_width
+
+        # Bottom boundary check
+        if new_y + new_height > screen_bottom:
+            if "bottom" in self.resize_edge:
+                new_height = screen_bottom - new_y
+            else:
+                new_y = screen_bottom - new_height
+
+        # Final validation to ensure minimum size is maintained
+        new_width = max(min_width, new_width)
+        new_height = max(min_height, new_height)
+
+        self.setGeometry(new_x, new_y, new_width, new_height)

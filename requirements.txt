@@ -1,0 +1,8 @@
+PyQt6>=6.4.0
+Pillow>=9.0.0
+pytesseract>=0.3.10
+mss>=6.1.0
+pyperclip>=1.8.2
+keyboard>=0.13.5
+ollama>=0.1.0
+

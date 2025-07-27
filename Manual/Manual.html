@@ -1,0 +1,491 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Screen Translator - Complete User Manual</title>
+</head>
+<body>
+    <div class="container">
+        <h1>🖥️ Screen Translator</h1>
+        <p class="subtitle">Complete User Manual</p>
+
+        <div class="warning">
+            <strong>⚠️ Important:</strong> Please read this manual carefully before use for the best experience
+        </div>
+
+        <div class="warning">
+            <h3>⚠️ Important Warning: When Opening the Program for the First Time (Windows SmartScreen)</h3>
+            <p>When you open <code>ScreenTranslator.exe</code> for the first time, Windows may display a blue window to protect against unknown programs. This is normal for programs that are not yet widely recognized.</p>
+            <p><strong>Easiest way to open the program:</strong></p>
+            <ol>
+                <li>When the <strong>"Windows protected your PC"</strong> window appears, click on the <strong>"More info"</strong> text</li>
+                <li>Then you will see the <strong>"Run anyway"</strong> button appear. Click this button to open the program</li>
+                <li>Generally, you only need to do this once for the first-time setup</li>
+            </ol>
+        </div>
+
+        <div class="warning">
+            <h3>If the Program is Blocked or Deleted by Antivirus</h3>
+            <p>In some cases, antivirus software may mistakenly identify the program file as harmful (called a "False Positive"). <strong>I can confirm that this program is safe and contains no viruses.</strong></p>
+            <p><strong>How to fix in Windows Defender:</strong></p>
+            <ol>
+                <li><strong>Don't delete the file!</strong> If there's a notification from Windows Security, click on that notification</li>
+                <li>Look for the file name <code>ScreenTranslator.exe</code> in the list, then select <strong>"Allow on device"</strong> and click <strong>"Start actions"</strong></li>
+                <li>If you can't find it, or the file has been deleted, add the program folder to the <strong>Exclusion list</strong>:
+                    <ul>
+                        <li>Press the <strong>Start</strong> button and type <strong>"Windows Security"</strong> and open it</li>
+                        <li>Go to <strong>"Virus & threat protection"</strong></li>
+                        <li>Click on <strong>"Manage settings"</strong></li>
+                        <li>Scroll down and click <strong>"Add or remove exclusions"</strong></li>
+                        <li>Click <strong>"+ Add an exclusion"</strong> and select <strong>"Folder"</strong></li>
+                        <li>Navigate to the folder where you store this <code>ScreenTranslator</code> program and click <strong>"Select Folder"</strong></li>
+                    </ul>
+                </li>
+            </ol>
+        </div>
+
+        <h2>🔧 Required Installation Steps (Must do before opening the program)</h2>
+
+        <h3>Part 1: Tesseract OCR (Required - for reading text from images)</h3>
+        <p>This program requires Tesseract to read text from the screen area you select</p>
+        <ol>
+            <li><strong>Download</strong>: Go to <a href="https://github.com/UB-Mannheim/tesseract/wiki" target="_blank">https://github.com/UB-Mannheim/tesseract/wiki</a></li>
+            <li>Select the installer file named <code>tesseract-ocr-w64-setup-v5.x.x.exe</code> (choose the latest version)</li>
+            <li><strong>Install</strong>: Double-click the downloaded file to install</li>
+            <li><span class="important">⚠️ Warning</span>: During installation, <strong>absolutely do not change the installation location</strong>. It must be installed at <code>C:\Program Files\Tesseract-OCR\</code> only</li>
+        </ol>
+
+        <h3>Part 2: Ollama AI Platform (Required - for running AI Model for translation)</h3>
+        <p>This program uses Ollama to run AI Models that handle translation</p>
+        <ol>
+            <li><strong>Download</strong>: Go to <a href="https://ollama.com/download" target="_blank">https://ollama.com/download</a> and select download for Windows</li>
+            <li><strong>Install</strong>: Double-click the downloaded file to install. When finished, restart your computer once</li>
+            <li><strong>Download AI Model</strong>:
+                <ul>
+                    <li>Press the <strong>Start</strong> button and type <code>cmd</code>. You will see a program called <strong>"Command Prompt"</strong>. Click to open it</li>
+                    <li>In the black window that opens, copy and paste the command below, then press Enter (recommended to install <code>Gemma 3n</code> first because of good and accurate translation quality)</li>
+                </ul>
+                <pre>ollama pull gemma3n</pre>
+                <ul>
+                    <li>Wait until the download is complete (may take a while). When finished, it will show <code>Success</code></li>
+                </ul>
+            </li>
+        </ol>
+        <p>Once you complete both parts, you're ready to use the Screen Translator program!</p>
+
+        <h2>🚀 Opening and Using the Program</h2>
+        <ol>
+            <li>Go back to the program folder and double-click <code>ScreenTranslator.exe</code> to open</li>
+            <li>A small dark control window will appear</li>
+            <li>Click the <strong>"📸 Capture Screen"</strong> button or press the <code>Alt</code> key on the keyboard twice quickly (<code>Alt+Alt</code>) to start capturing the screen</li>
+            <li>Drag the mouse to select the text area you want to translate</li>
+            <li>When you release the mouse, the translation result window will appear with the translation</li>
+        </ol>
+        <p><span class="important">Important note</span>: Do not delete or move the folder named <code>_internal</code> as it contains important program files</p>
+
+        <h2>🤖 AI Models Details and Additional Installation</h2>
+        <p>If you want Models that translate better or are more suitable for your machine, you can install additional ones using <strong>Command Prompt</strong> as before</p>
+
+        <h3>Models Comparison Summary:</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Model</th>
+                    <th>Size</th>
+                    <th>Minimum RAM</th>
+                    <th>Speed</th>
+                    <th>Translation Quality</th>
+                    <th>Suitable For</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Gemma 3n</strong></td>
+                    <td>~2.0GB</td>
+                    <td>4GB</td>
+                    <td>⭐⭐⭐⭐</td>
+                    <td>⭐⭐⭐⭐</td>
+                    <td>(Recommended) Good translation quality, accurate</td>
+                </tr>
+                <tr>
+                    <td><strong>Gemma 3n (Unsloth)</strong></td>
+                    <td>~1.8GB</td>
+                    <td>3GB</td>
+                    <td>⭐⭐⭐⭐</td>
+                    <td>⭐⭐⭐⭐</td>
+                    <td>Older machines, RAM-efficient</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>📥 How to Install Additional Models:</h3>
+        <p>Open <strong>Command Prompt</strong> and use the following commands according to the Model you want</p>
+
+        <div class="info">
+            <strong>Note:</strong> Downloading each Model will take some time depending on your internet speed. Please be patient until you see "success" or "pulling manifest" message
+        </div>
+
+        <ul>
+            <li><strong>Gemma 3n (Already recommended)</strong>
+                <pre>ollama pull gemma3n</pre>
+                <p><em>Size: ~2.0GB, good translation quality, accurate, suitable for general translation work</em></p>
+            </li>
+
+            <li><strong>Gemma 3n (Unsloth) (RAM-efficient)</strong>
+                <pre>ollama pull hf.co/unsloth/gemma-3n-E4B-it-GGUF:Q4_K_XL</pre>
+                <p><em>Size: ~1.8GB, optimized version for RAM efficiency, suitable for older machines</em></p>
+            </li>
+        </ul>
+
+        <h3>⚙️ How to Change Model in the Program:</h3>
+        <ol>
+            <li>In the translation result window, click on the gear icon (⚙️)</li>
+            <li>Select the Model you want from the list</li>
+            <li>Click "💾 Save Settings" to save</li>
+        </ol>
+
+        <h3>🗑️ Managing Models (Deleting Unwanted Models):</h3>
+        <p>If the installed AI Models take up too much disk space, you can remove unused Models</p>
+
+        <div class="info">
+            <strong>Tip:</strong> Each AI Model takes about 1.5-3GB of space. It's recommended to keep only 1-2 Models that you actually use
+        </div>
+
+        <h4>📋 How to View List of Installed Models:</h4>
+        <pre>ollama list</pre>
+        <p><em>This command will show all Models installed on your machine</em></p>
+
+        <h4>🗑️ How to Delete Unwanted Model:</h4>
+        <p>Use the command below, replacing <code>[MODEL_NAME]</code> with the name of the Model you want to delete:</p>
+        <pre>ollama rm [MODEL_NAME]</pre>
+
+        <p><strong>Examples of deleting Models:</strong></p>
+        <ul>
+            <li>Delete gemma3n: <code>ollama rm gemma3n</code></li>
+            <li>Delete Gemma 3n Unsloth: <code>ollama rm hf.co/unsloth/gemma-3n-E4B-it-GGUF:Q4_K_XL</code></li>
+        </ul>
+
+        <div class="warning">
+            <strong>⚠️ Warning:</strong> Once you delete a Model, you'll need to download it again if you want to use it. So only delete Models you're sure you won't use
+        </div>
+
+        <h2>💻 System Requirements</h2>
+        <h3>Minimum:</h3>
+        <ul>
+            <li>Windows 10 64-bit or newer</li>
+            <li>8GB RAM</li>
+            <li>10GB free space</li>
+        </ul>
+        <h3>Recommended:</h3>
+        <ul>
+            <li>16GB+ RAM</li>
+            <li>NVIDIA RTX 3060 graphics card or higher (will help processing speed significantly)</li>
+            <li>Use SSD for data storage</li>
+        </ul>
+
+        <h2>🛠️ Common Troubleshooting</h2>
+        <ul>
+            <li><strong>Shows "Connection Refused"</strong>: Try opening Command Prompt and run <code>ollama serve</code> command, then open the program again</li>
+            <li><strong>Can't translate / OCR can't read</strong>: Check if Tesseract OCR is properly installed at <code>C:\Program Files\Tesseract-OCR\</code></li>
+            <li><strong>Program runs slowly</strong>: Try switching to a smaller AI Model like <code>Gemma 3n (Unsloth)</code></li>
+            <li><strong>Not enough RAM</strong>: Close other unnecessary programs while using</li>
+        </ul>
+
+        <div class="footer">
+            <p>Hope this manual will be helpful for your usage</p>
+        </div>
+    </div>
+
+    <!-- CSS Styles -->
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.8;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px;
+            background-color: #fff;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: linear-gradient(90deg, #667eea, #764ba2, #f093fb);
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 700;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #7f8c8d;
+            font-size: 1.1em;
+            margin-bottom: 40px;
+            font-style: italic;
+        }
+
+        h2 {
+            color: #34495e;
+            font-size: 1.8em;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            padding: 15px 20px;
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-left: 5px solid #667eea;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        h3 {
+            color: #495057;
+            font-size: 1.4em;
+            margin-top: 15px;
+            margin-bottom: 15px;
+            padding-left: 15px;
+            border-left: 3px solid #764ba2;
+        }
+
+        .warning {
+            background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+            color: #856404;
+            padding: 20px;
+            border: none;
+            border-left: 5px solid #f39c12;
+            margin: 25px 0;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(243, 156, 18, 0.15);
+            font-weight: 500;
+        }
+
+        .info {
+            background: linear-gradient(135deg, #d1ecf1, #bee5eb);
+            color: #0c5460;
+            padding: 20px;
+            border: none;
+            border-left: 5px solid #17a2b8;
+            margin: 25px 0;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(23, 162, 184, 0.15);
+        }
+
+        .info::before {
+            content: "💡 ";
+            font-size: 1.2em;
+            margin-right: 8px;
+        }
+
+        ol, ul {
+            padding-left: 30px;
+        }
+
+        li {
+            margin-bottom: 10px;
+            padding: 5px 0;
+        }
+
+        code {
+            background-color: #f1f3f4;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            color: #e74c3c;
+            font-weight: 500;
+        }
+
+        .toc h3 {
+            margin-top: 0;
+            color: #495057;
+            border: none;
+            padding: 0;
+        }
+
+        .toc ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .toc li {
+            padding: 8px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .toc li:last-child {
+            border-bottom: none;
+        }
+
+        .toc a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .toc a:hover {
+            color: #764ba2;
+        }
+
+        /* Typography & Content */
+        p {
+            margin-bottom: 18px;
+            text-align: justify;
+        }
+
+        strong {
+            color: #2c3e50;
+            font-weight: 600;
+        }
+
+        /* Code Block Styles */
+        pre {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', Consolas, 'Liberation Mono', monospace;
+            font-size: 14px;
+            font-weight: 500;
+            border-left: 5px solid #3498db;
+            margin: 15px 0;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            position: relative;
+            user-select: all;
+            cursor: pointer;
+        }
+
+        pre::before {
+            content: "📋 Click to copy";
+            position: absolute;
+            right: 10px;
+            background: #3498db;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-family: 'Segoe UI', sans-serif;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        pre:hover::before {
+            opacity: 1;
+        }
+
+        pre:hover {
+            background: linear-gradient(135deg, #34495e, #2c3e50);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        }
+
+         /* Style for copied state */
+        pre.copied::before {
+            content: "Copied!";
+            background: #27ae60;
+            opacity: 1;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 25px 0;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        th {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+
+        tr:hover {
+            background-color: #e3f2fd;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+
+            h2 {
+                font-size: 1.5em;
+                padding: 10px 15px;
+            }
+        }
+    </style>
+
+    <!-- JavaScript -->
+
+    <script>
+        // Copy to clipboard functionality for code blocks
+        document.querySelectorAll('pre').forEach((block) => {
+            block.addEventListener('click', () => {
+                // Toggle copied state
+                block.classList.toggle('copied');
+
+                // Copy text to clipboard
+                navigator.clipboard.writeText(block.innerText).then(() => {
+                    console.log('Text copied to clipboard');
+                }, (err) => {
+                    console.error('Error copying text: ', err);
+                });
+
+                // Remove copied state after 2 seconds
+                setTimeout(() => {
+                    block.classList.remove('copied');
+                }, 2000);
+            });
+        });
+    </script>
+</body>
+</html>
