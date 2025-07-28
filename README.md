@@ -1,39 +1,39 @@
-# Screen Translator
+# 🌍 Screen Translator
 
-A modern, feature-rich desktop application for Windows that captures text from any area of your screen using OCR (Optical Character Recognition) and provides instant AI-powered translations using local language models via Ollama.
+A real-time screen text translation application for Windows that uses OCR and AI technology to translate text accurately and quickly.
 
-## ✨ Features
+## ✨ Key Features
 
 ### 🖱️ **Intuitive Screen Capture**
-- **Double Alt Hotkey**: Press Alt twice quickly to instantly activate screen selection
-- **Visual Selection Tool**: Click and drag to select any area of your screen with real-time preview
-- **Full-Screen Overlay**: Transparent overlay with visual feedback during selection
-- **Escape to Cancel**: Press ESC to cancel selection at any time
+- **Double Alt Hotkey**: Press Alt twice quickly to activate screen area selection
+- **Area Selection Tool**: Click and drag to select any area on screen with real-time preview
+- **Transparent Overlay**: Clear visual feedback during area selection
+- **Cancel with ESC**: Press ESC to cancel selection at any time
 
 ### 🔍 **Advanced OCR Processing**
-- **Tesseract Integration**: Uses industry-standard Tesseract OCR engine for accurate text extraction
-- **Multi-PSM Support**: Automatically tries different page segmentation modes for optimal results
-- **Grayscale Optimization**: Converts images to grayscale for improved OCR accuracy
-- **Error Handling**: Comprehensive error reporting for OCR failures
+- **Tesseract OCR Integration**: Uses industry-standard Tesseract OCR engine for accurate text extraction
+- **Multi-PSM Support**: Tries different page segmentation modes for optimal results
+- **Grayscale Optimization**: Converts images to grayscale to improve OCR accuracy
+- **Error Handling**: Comprehensive error reporting system for OCR failures
 
 ### 🤖 **AI-Powered Translation**
-- **Local AI Models**: Uses Ollama for private, offline translations
-- **Multiple Model Support**: 
+- **Local AI Models**: Uses Ollama for offline and secure translation
+- **Multiple Model Support**:
   - Gemma 3n (Standard)
   - Gemma 3n Unsloth (Optimized)
-  - Phi3 Mini (Lightweight)
+  - And other supported models
 - **Optimized Parameters**: Model-specific temperature and token settings for best results
 - **Background Processing**: Non-blocking translation using threaded workers
 
 ### 🎨 **Modern User Interface**
-- **Dark Theme**: Beautiful Catppuccin-inspired color scheme
-- **Floating Translation Window**: 
-  - Draggable and resizable overlay
+- **Dark Theme**: Beautiful Catppuccin-style dark theme
+- **Floating Translation Window**:
+  - Draggable and resizable
   - Smooth entrance animations
-  - Always-on-top positioning
-- **Control Panel**: Clean, minimalist main window
+  - Always on top
+- **Control Panel**: Clean and minimalist main window
 - **Settings Dialog**: Easy model switching and configuration
-- **Status Indicators**: Real-time feedback on processing status
+- **Status Indicators**: Real-time processing feedback
 
 ### 📋 **Productivity Features**
 - **Auto-Clipboard**: Translated text automatically copied to clipboard
@@ -41,254 +41,242 @@ A modern, feature-rich desktop application for Windows that captures text from a
 - **Scrollable Results**: Handle long translations with elegant scrolling
 - **Persistent Overlay**: Translation window stays visible until closed
 
-## 🛠️ Requirements
+## 🛠️ System Requirements
 
-### System Requirements
+### System Specifications
 - **Operating System**: Windows 10 or later
 - **Python**: 3.8 or higher
 - **Memory**: 4GB RAM minimum (8GB recommended for larger models)
 
 ### Required Software
 
-#### Tesseract OCR
+#### 1. Tesseract OCR
 - **Download**: [Tesseract at UB-Mannheim](https://github.com/UB-Mannheim/tesseract/wiki)
-- **Installation Path**: Must be installed at `C:\Program Files\Tesseract-OCR\`
-- **Note**: If installed elsewhere, update `TESSERACT_PATH` in the configuration
+- **Installation**: The program will automatically search for Tesseract in these locations:
+  - `C:\Program Files\Tesseract-OCR\tesseract.exe`
+  - `C:\Program Files (x86)\Tesseract-OCR\tesseract.exe`
+  - Or in system PATH
+- **Note**: If installed in a different location, the program will show a warning on startup
 
-#### Ollama
+#### 2. Ollama
 - **Download**: [ollama.com](https://ollama.com/download)
-- **Requirements**: Must be running in the background
+- **Requirement**: Must be running in the background
 - **Models**: At least one translation-capable model must be installed
 
 ### Python Dependencies
 ```
-PyQt6
-pytesseract
-Pillow
-mss
-keyboard
-pyperclip
-ollama
+PyQt6>=6.4.0
+Pillow>=9.0.0
+pytesseract>=0.3.10
+mss>=6.1.0
+pyperclip>=1.8.2
+keyboard>=0.13.5
+ollama>=0.1.0
 ```
 
 ## 📦 Installation
 
-### 1. Install System Dependencies
+### Method 1: Use Pre-built Executable (Recommended)
+
+1. **Download build files**:
+   - Go to `build/ScreenTranslator/` folder
+   - Run `ScreenTranslator.exe`
+
+### Method 2: Run from Source Code
+
+#### 1. Install System Dependencies
 
 **Install Tesseract OCR:**
-```bash
-# Download and run the installer from UB-Mannheim
-# Ensure installation path is: C:\Program Files\Tesseract-OCR\
-```
+1. Download from [Tesseract at UB-Mannheim](https://github.com/UB-Mannheim/tesseract/wiki)
+2. Install to default location (`C:\Program Files\Tesseract-OCR\`)
 
 **Install Ollama:**
-```bash
-# Download from ollama.com and install
-# Ollama will run automatically in the background
-```
+1. Download from [ollama.com](https://ollama.com/download)
+2. Install and start the service
+3. Install required models:
+   ```bash
+   ollama pull gemma3n
+   # or
+   ollama pull hf.co/unsloth/gemma-3n-E4B-it-GGUF:Q4_K_XL
+   ```
 
-### 2. Install Ollama Models
-
-Pull at least one translation model:
-```bash
-ollama pull gemma3n
-# or
-ollama pull phi3:mini
-```
-
-### 3. Install Python Dependencies
+#### 2. Install Python Dependencies
 
 ```bash
-pip install PyQt6 pytesseract Pillow mss keyboard pyperclip ollama
+# Clone repository
+git clone [repository-url]
+cd ScreenTranslator
+
+# Install dependencies
+pip install -r requirements.txt
 ```
 
-### 4. Run the Application
+#### 3. Run the Program
 
 ```bash
 python main.py
 ```
 
-### 5. Building a Distributable Version
-
-To create a standalone distributable version of the application:
+### Method 3: Build Executable
 
 ```bash
-# Run the build script
-.\build.bat
+# Run build script
+build.bat
 ```
 
-This will:
-- Install all required dependencies
-- Create a distributable version in the `dist\ScreenTranslator` directory
-- Include the manual files from the Manual folder
-- Create an `_internal` folder for application resources
-
-The executable can be found at `dist\ScreenTranslator\ScreenTranslator.exe`
+The executable will be created in `build/ScreenTranslator/` folder
 
 ## 🚀 Usage
 
-### Quick Start
-1. **Launch**: Run `python main.py`
-2. **Activate**: Press Alt twice quickly or click "Capture Screen Area"
-3. **Select**: Click and drag to select text area on screen
-4. **Translate**: Wait for OCR extraction and AI translation
-5. **Copy**: Translation is automatically copied to clipboard
+### Getting Started
 
-### Interface Overview
+1. **Launch the Program**:
+   - Run `ScreenTranslator.exe` or `python main.py`
+   - The control window will appear
 
-#### Main Control Window
-- **Capture Button**: Manually start screen selection
-- **Settings Button**: Access model configuration and status
-- **Hotkey Info**: Shows the Alt+Alt shortcut reminder
+2. **Check Settings**:
+   - Click "Settings" to select desired AI model
+   - Adjust font size as needed
 
-#### Translation Overlay
-- **Draggable Header**: Click and drag the top area to move window
-- **Resizable Borders**: Drag edges or corners to resize
-- **Settings Access**: Click ⚙️ for quick model switching
-- **Close Button**: ✕ to close the overlay
+### Translating Text
 
-#### Screen Selector
-- **Visual Feedback**: Transparent overlay with selection rectangle
-- **Instructions**: On-screen guidance for selection
-- **Real-time Preview**: See selected area as you drag
+1. **Select Screen Area**:
+   - Press **Alt twice quickly** (within 0.5 seconds)
+   - Screen will switch to area selection mode
 
-### Keyboard Shortcuts
-- **Alt + Alt**: Activate screen selection (double-press within 0.5 seconds)
-- **ESC**: Cancel screen selection
-- **Mouse Drag**: Select area for translation
+2. **Select Text**:
+   - **Click and drag** to select area containing text
+   - Real-time preview of selected area is shown
 
-### Settings Configuration
-- **Model Selection**: Choose from available Ollama models
-- **Connection Status**: Real-time Ollama connectivity check
-- **Model Information**: View available models and configuration
+3. **Get Translation**:
+   - Program will automatically process OCR and translate
+   - Translation window will appear with results
+   - Translated text is automatically copied to clipboard
+
+### Managing Translation Window
+
+- **Move**: Click and drag to move window
+- **Resize**: Drag window corners to resize
+- **Close**: Click X button or press ESC
+
+### Hotkeys
+
+| Key | Function |
+|-----|----------|
+| **Alt + Alt** | Activate screen area selection |
+| **ESC** | Cancel area selection / Close translation window |
+| **Ctrl+C** | Copy translated text (done automatically) |
 
 ## ⚙️ Configuration
 
-### Model Configuration
-The application supports multiple AI models with optimized settings:
+### AI Model Selection
 
-```python
-AVAILABLE_MODELS = {
-    "Gemma 3n": "gemma3n",
-    "Gemma 3n (Unsloth)": "hf.co/unsloth/gemma-3n-E4B-it-GGUF:Q4_K_XL",
-    "phi3 (mini)": "phi3:mini"
-}
+1. Open **Settings** from control window
+2. Select model from list:
+   - **Gemma 3n**: Standard model, suitable for general use
+   - **Gemma 3n (Unsloth)**: Optimized model with better performance
+3. Click **Save Settings**
+
+### Font Customization
+
+- Use slider in Settings window to adjust font size
+- Font size range: 8-48 px (default: 16px)
+
+### Settings File
+
+Settings are saved in:
+```
+%USERPROFILE%\.screen_translator_settings.json
 ```
 
-### Customization Options
-- **Tesseract Path**: Update `TESSERACT_PATH` if installed elsewhere
-- **Window Dimensions**: Modify `OVERLAY_WIDTH` and `OVERLAY_HEIGHT`
-- **Hotkey Timing**: Adjust `ALT_DOUBLE_PRESS_THRESHOLD`
-- **Model Parameters**: Fine-tune temperature and token limits per model
+## 🗂️ Project Structure
 
-### Theme Customization
-The application uses a modern dark theme with customizable colors:
-- Primary: `#89b4fa` (Blue)
-- Secondary: `#f38ba8` (Pink)
-- Success: `#a6e3a1` (Green)
-- Warning: `#fab387` (Orange)
-- Background: `#1e1e2e` (Dark)
+```
+ScreenTranslator/
+├── main.py                 # Program entry point
+├── requirements.txt        # Python dependencies
+├── build.bat              # Script to build executable
+├── ScreenTranslator.spec   # PyInstaller configuration
+├── src/
+│   ├── config/
+│   │   └── config.py      # Configuration and settings
+│   ├── core/
+│   │   └── app.py         # Main application class
+│   ├── ui/
+│   │   ├── control_window.py     # Main control window
+│   │   ├── screen_selector.py    # Screen area selection tool
+│   │   ├── settings_dialog.py    # Settings window
+│   │   ├── translation_overlay.py # Translation display window
+│   │   └── ui_components.py      # General UI components
+│   └── utils/
+│       ├── keyboard_manager.py   # Keyboard shortcuts management
+│       ├── ocr.py               # OCR processing
+│       ├── style_manager.py     # Theme and style management
+│       └── workers.py           # Background workers
+├── build/
+│   └── ScreenTranslator/    # Built executable files
+└── Manual/                 # User manuals
+```
 
-## 🐛 Troubleshooting
+## 🔧 Troubleshooting
 
 ### Common Issues
 
-**"Tesseract OCR not installed or not in PATH"**
-- Ensure Tesseract is installed at `C:\Program Files\Tesseract-OCR\`
-- Verify the executable exists at the specified path
-- Update `TESSERACT_PATH` in code if using custom installation
+#### 1. Tesseract OCR Not Found
+**Symptom**: "Tesseract OCR Missing" warning message
+**Solution**:
+- Verify Tesseract is installed
+- Check if it's in the correct location or system PATH
 
-**"Could not connect to Ollama"**
-- Verify Ollama is installed and running
-- Check if any models are pulled: `ollama list`
-- Restart Ollama service if needed
+#### 2. Cannot Connect to Ollama
+**Symptom**: "Ollama Connection Issue" warning message
+**Solution**:
+- Check if Ollama is running: `ollama list`
+- Restart Ollama: `ollama serve`
+- Verify models are installed
 
-**"No text detected" or Poor OCR Results**
-- Ensure selected area contains clear, readable text
-- Try selecting larger text or higher contrast areas
-- Text should be primarily in English for best results
+#### 3. Inaccurate OCR
+**Solutions**:
+- Select areas with clear text
+- Avoid complex backgrounds
+- Ensure text is appropriately sized
 
-**Translation Errors**
-- Verify the selected Ollama model supports translation
-- Check if model is properly loaded: `ollama list`
-- Try switching to a different model in settings
+#### 4. Slow Translation
+**Solutions**:
+- Switch to a smaller model
+- Check RAM and CPU usage
+- Close unnecessary programs
 
-### Performance Tips
-- **Larger Models**: Better translation quality but slower processing
-- **Smaller Models**: Faster processing but potentially lower quality
-- **Screen Resolution**: Higher DPI screens may need larger selection areas
-- **Text Clarity**: Sharp, high-contrast text produces better OCR results
+### Debugging
 
-## 🏗️ Architecture
+To view debug information:
+1. Open Command Prompt
+2. Run program via: `python main.py`
+3. View debug messages in console
 
-> **Note:** The application has been refactored from a single monolithic file into a modular package structure to improve maintainability and organization. The functionality remains the same, but the code is now better organized and easier to maintain.
+## 🆕 Updates and Development
 
-### Package Structure
-The application is organized into a modular package structure:
+### Updates
+- Check for new versions through repository
+- Download new executable files or update source code
 
-```
-screen_translator/           # Main package
-├── __init__.py              # Package initialization
-├── app.py                   # Main application class and entry point
-├── config.py                # Configuration and settings management
-├── style.py                 # Centralized style management
-├── ui/                      # User interface components
-│   ├── __init__.py
-│   ├── control.py           # Main control window
-│   ├── indicators.py        # Status and copy indicators
-│   ├── overlay.py           # Translation overlay window
-│   ├── selector.py          # Screen area selector
-│   └── settings.py          # Settings dialog
-└── utils/                   # Utility classes
-    ├── __init__.py
-    ├── keyboard.py          # Keyboard event handling
-    ├── ocr.py               # OCR processing
-    └── translation.py       # Translation worker
-```
-
-### Core Components
-- **ScreenSelector**: Full-screen overlay for area selection
-- **TranslationOverlay**: Floating window for displaying results
-- **ControlWindow**: Main application control panel
-- **OCRProcessor**: Handles Tesseract OCR operations
-- **TranslationWorker**: Background thread for AI translation
-- **KeyboardManager**: Global hotkey detection and handling
-- **StyleManager**: Centralized UI styling
-- **Config**: Application configuration
-
-### Design Patterns
-- **Threading**: Non-blocking UI with background processing
-- **Signals/Slots**: Qt-based event handling
-- **Modular Design**: Separate modules for distinct functionality
-- **Configuration Management**: Centralized settings and styling
-- **Package Organization**: Logical grouping of related components
-
-## 🤝 Contributing
-
-Contributions are welcome! Areas for improvement:
-- Additional language support
-- More AI model integrations
-- Enhanced OCR preprocessing
-- Cross-platform compatibility
-- UI/UX improvements
+### Development
+This project is open source and welcomes contributions:
+- Bug reports
+- Feature suggestions
+- Code improvements
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE.txt](LICENSE.txt) file for details.
+See details in `LICENSE.txt`
 
-## 🔗 Links
+## 🤝 Support
 
-- **Tesseract OCR**: [GitHub Repository](https://github.com/tesseract-ocr/tesseract)
-- **Ollama**: [Official Website](https://ollama.com/)
-- **PyQt6**: [Documentation](https://doc.qt.io/qtforpython/)
-
-## 🙏 Acknowledgments
-
-- Tesseract OCR team for the excellent OCR engine
-- Ollama team for making local AI accessible
-- PyQt team for the robust GUI framework
-- Contributors to all the open-source libraries used
+If you encounter issues or need help:
+- Create an Issue in the repository
+- Check Manual in `Manual/` folder
+- Read the troubleshooting section in this document
 
 ---
 
-**Made with ❤️ for seamless screen translation**
+**Note**: This program uses local AI models. Your data will not be sent to external servers.
