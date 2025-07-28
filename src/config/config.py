@@ -1,9 +1,49 @@
 ﻿import os
 import json
 import shutil
+from PyQt6.QtWidgets import QApplication
+from PyQt6.QtCore import QPoint, QSize, QRect
 
 class Config:
     """Application configuration"""
+    
+    @staticmethod
+    def dpi_scale(value):
+        """Scale a value based on the current screen's DPI
+        
+        This helps ensure UI elements have consistent physical size
+        regardless of screen DPI/scaling settings.
+        """
+        if not QApplication.instance():
+            return value  # Return original value if QApplication not initialized
+            
+        # Get the primary screen's device pixel ratio
+        screen = QApplication.primaryScreen()
+        if not screen:
+            return value
+            
+        ratio = screen.devicePixelRatio()
+        return int(value * ratio)
+        
+    @staticmethod
+    def dpi_point(x, y):
+        """Create a DPI-aware QPoint"""
+        return QPoint(Config.dpi_scale(x), Config.dpi_scale(y))
+        
+    @staticmethod
+    def dpi_size(width, height):
+        """Create a DPI-aware QSize"""
+        return QSize(Config.dpi_scale(width), Config.dpi_scale(height))
+        
+    @staticmethod
+    def dpi_rect(x, y, width, height):
+        """Create a DPI-aware QRect"""
+        return QRect(
+            Config.dpi_scale(x), 
+            Config.dpi_scale(y), 
+            Config.dpi_scale(width), 
+            Config.dpi_scale(height)
+        )
     # Try to find Tesseract automatically on different systems
     TESSERACT_PATHS = [
         r'C:\Program Files\Tesseract-OCR\tesseract.exe',  # Windows default

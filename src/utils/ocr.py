@@ -2,6 +2,7 @@
 import mss
 from PIL import Image
 import pytesseract
+from PyQt6.QtWidgets import QApplication
 from src.config import Config
 
 class OCRProcessor:
@@ -21,6 +22,18 @@ class OCRProcessor:
         """Extract text from screen area using OCR"""
         try:
             with mss.mss() as sct:
+                # Convert coordinates from device-independent pixels to physical screen pixels
+                # This is necessary when the screen scaling is not 100%
+                if QApplication.instance():
+                    screen = QApplication.primaryScreen()
+                    if screen:
+                        # Get the device pixel ratio (e.g., 1.5 for 150% scaling)
+                        ratio = screen.devicePixelRatio()
+                        if ratio != 1.0:
+                            # Convert coordinates to physical pixels
+                            x, y = int(x * ratio), int(y * ratio)
+                            width, height = int(width * ratio), int(height * ratio)
+                
                 # Ensure coordinates are valid
                 x, y = max(0, int(x)), max(0, int(y))
                 width, height = max(1, int(width)), max(1, int(height))

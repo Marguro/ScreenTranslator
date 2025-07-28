@@ -2,6 +2,8 @@
 from PyQt6.QtCore import Qt, QRect, QPoint, QSize, QTimer, pyqtSignal
 from PyQt6.QtGui import QPalette, QColor, QPainter, QPen, QRegion
 
+from src.config import Config
+
 class ScreenSelector(QWidget):
     """Full-screen overlay for area selection"""
     area_selected = pyqtSignal(int, int, int, int)
@@ -45,17 +47,17 @@ class ScreenSelector(QWidget):
 
         # Instructions label
         self.instructions = QLabel("Click and drag to select area. Press ESC to cancel.", self)
-        self.instructions.setStyleSheet("""
-            QLabel {
+        self.instructions.setStyleSheet(f"""
+            QLabel {{
                 color: white;
-                font: bold 14px 'Segoe UI';
+                font: bold {Config.dpi_scale(14)}px 'Segoe UI';
                 background: rgba(0, 0, 0, 180);
-                border-radius: 10px;
-                padding: 10px 20px;
-            }
+                border-radius: {Config.dpi_scale(10)}px;
+                padding: {Config.dpi_scale(10)}px {Config.dpi_scale(20)}px;
+            }}
         """)
         self.instructions.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.instructions.resize(400, 50)
+        self.instructions.resize(Config.dpi_scale(400), Config.dpi_scale(50))
 
     def _setup_timers(self):
         """Setup initialization timers"""
@@ -66,7 +68,7 @@ class ScreenSelector(QWidget):
         """Position instructions at screen center"""
         primary_screen = QApplication.primaryScreen()
         center_x = primary_screen.geometry().center().x()
-        self.instructions.move(center_x - self.instructions.width() // 2, 30)
+        self.instructions.move(center_x - self.instructions.width() // 2, Config.dpi_scale(30))
 
     def _ensure_visibility(self):
         """Ensure window is visible and on top"""
