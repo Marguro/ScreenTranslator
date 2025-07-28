@@ -3,8 +3,7 @@ from PyQt6.QtWidgets import (
     QWidget, QApplication, QVBoxLayout, QHBoxLayout, QFrame, QLabel, 
     QPushButton, QTextEdit, QDialog, QSizePolicy
 )
-from PyQt6.QtCore import Qt, QPoint, QRect, QSize, QTimer, QPropertyAnimation, QEasingCurve
-from PyQt6.QtGui import QColor, QPainter, QPen
+from PyQt6.QtCore import Qt, QPoint, QSize, QTimer, QPropertyAnimation, QEasingCurve
 
 from src.config import Config
 from src.utils import StyleManager
@@ -28,6 +27,9 @@ class TranslationOverlay(QWidget):
         self._setup_variables()
         self.setup_ui()
         self._setup_animations()
+        
+        # Install event filter on self to handle events from child widgets
+        self.installEventFilter(self)
 
     def _setup_window(self):
         """Configure window properties"""
@@ -36,11 +38,42 @@ class TranslationOverlay(QWidget):
             Qt.WindowType.WindowStaysOnTopHint
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        
+        # Enable mouse tracking to receive mouse move events even when not pressed
+        self.setMouseTracking(True)
 
         # Position near top-right corner
         screen = QApplication.primaryScreen().geometry()
-        self.resize(Config.OVERLAY_WIDTH, Config.OVERLAY_HEIGHT)
-        self.move(screen.width() - Config.OVERLAY_WIDTH - 20, 50)
+        # Use DPI-aware sizing
+        self.resize(Config.dpi_scale(Config.OVERLAY_WIDTH), Config.dpi_scale(Config.OVERLAY_HEIGHT))
+        # Use DPI-aware positioning
+        self.move(screen.width() - Config.dpi_scale(Config.OVERLAY_WIDTH + 20), Config.dpi_scale(50))
+        
+    def _enable_mouse_tracking_for_children(self, widget):
+        """Recursively enable mouse tracking for all child widgets"""
+        widget.setMouseTracking(True)
+        
+        # Process all child widgets recursively
+        for child in widget.findChildren(QWidget, options=Qt.FindChildOption.FindChildrenRecursively):
+            child.setMouseTracking(True)
+            # Install event filter on all child widgets
+            child.installEventFilter(self)
+            
+    def showEvent(self, event):
+        """Called when the widget is shown"""
+        super().showEvent(event)
+        # Enable mouse tracking for all child widgets when shown
+        self._enable_mouse_tracking_for_children(self)
+        
+    def eventFilter(self, watched, event):
+        """Filter events from child widgets"""
+        if event.type() == event.Type.MouseMove:
+            # Update cursor based on global position
+            local_pos = self.mapFromGlobal(event.globalPosition().toPoint())
+            self._update_cursor(local_pos)
+            
+        # Always return False to allow the event to be processed further
+        return False
 
     def _setup_variables(self):
         """Initialize instance variables"""
@@ -53,22 +86,28 @@ class TranslationOverlay(QWidget):
         self.resize_start_geometry = None
         self.is_resizing = False
         self.resize_edge = None
-        self.resize_margin = 15
+        self.resize_margin = Config.dpi_scale(15)  # DPI-aware resize margin
 
     def setup_ui(self):
         """Setup the user interface"""
         # Main container
         self.main_frame = QFrame(self)
         self.main_frame.setStyleSheet(StyleManager.get_overlay_style())
+        self.main_frame.setMouseTracking(True)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self.main_frame)
 
-        # Inner layout
+        # Inner layout with DPI-aware margins and spacing
         inner_layout = QVBoxLayout(self.main_frame)
-        inner_layout.setContentsMargins(20, 15, 20, 15)
-        inner_layout.setSpacing(12)
+        inner_layout.setContentsMargins(
+            Config.dpi_scale(20), 
+            Config.dpi_scale(15), 
+            Config.dpi_scale(20), 
+            Config.dpi_scale(15)
+        )
+        inner_layout.setSpacing(Config.dpi_scale(12))
 
         # Setup sections
         self._setup_header(inner_layout)
@@ -79,26 +118,27 @@ class TranslationOverlay(QWidget):
         """Setup header with title and controls"""
         self.header_frame = QFrame()
         self.header_frame.setStyleSheet("QFrame { background: transparent; border: none; }")
-        self.header_frame.setFixedHeight(40)
+        self.header_frame.setFixedHeight(Config.dpi_scale(40))
         self.header_frame.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.header_frame.setMouseTracking(True)
 
         header_layout = QHBoxLayout(self.header_frame)
         header_layout.setContentsMargins(0, 0, 0, 0)
-        header_layout.setSpacing(10)
+        header_layout.setSpacing(Config.dpi_scale(10))
 
         # Title section
         title_layout = QHBoxLayout()
-        title_layout.setSpacing(8)
+        title_layout.setSpacing(Config.dpi_scale(8))
 
         icon_label = QLabel("🌐")
-        icon_label.setStyleSheet("font-size: 18px; color: #89b4fa;")
+        icon_label.setStyleSheet(f"font-size: {Config.dpi_scale(18)}px; color: #89b4fa;")
 
         # Store reference to title label for easy updates
         self.title_label = QLabel("Translation")
-        self.title_label.setStyleSheet("color: #cdd6f4; font: bold 14px 'Segoe UI';")
+        self.title_label.setStyleSheet(f"color: #cdd6f4; font: bold {Config.dpi_scale(14)}px 'Segoe UI';")
 
         drag_hint = QLabel("• • •")
-        drag_hint.setStyleSheet("color: rgba(205, 214, 244, 0.5); font: bold 12px 'Segoe UI';")
+        drag_hint.setStyleSheet(f"color: rgba(205, 214, 244, 0.5); font: bold {Config.dpi_scale(12)}px 'Segoe UI';")
 
         title_layout.addWidget(icon_label)
         title_layout.addWidget(self.title_label)
@@ -134,20 +174,22 @@ class TranslationOverlay(QWidget):
         self.translation_text = QTextEdit()
         self.translation_text.setStyleSheet(StyleManager.get_text_edit_style())
         self.translation_text.setReadOnly(True)
-        self.translation_text.setMinimumHeight(60)
-        self.translation_text.setMaximumHeight(1500)
+        self.translation_text.setMinimumHeight(Config.dpi_scale(60))
+        self.translation_text.setMaximumHeight(Config.dpi_scale(1500))
+        self.translation_text.setMouseTracking(True)
         layout.addWidget(self.translation_text)
 
     def _setup_footer(self, layout):
         """Setup footer with status indicators"""
         self.footer_frame = QFrame()
         self.footer_frame.setStyleSheet("QFrame { background: transparent; border: none; }")
-        self.footer_frame.setFixedHeight(30)
+        self.footer_frame.setFixedHeight(Config.dpi_scale(30))
         self.footer_frame.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.footer_frame.setMouseTracking(True)
 
         footer_layout = QHBoxLayout(self.footer_frame)
         footer_layout.setContentsMargins(0, 0, 0, 0)
-        footer_layout.setSpacing(10)
+        footer_layout.setSpacing(Config.dpi_scale(10))
 
         # Status and copy indicators
         self.status_indicator = StatusIndicator()
@@ -160,35 +202,35 @@ class TranslationOverlay(QWidget):
 
     def _setup_animations(self):
         """Setup entrance animations"""
-        # เริ่มต้นด้วยการซ่อน widget
+        # Start by hiding the widget
         self.setWindowOpacity(0.0)
 
-        # เก็บตำแหน่งเดิมไว้
+        # Store the original position
         self.original_pos = self.pos()
 
-        # ตั้งตำแหน่งเริ่มต้นสำหรับ slide animation
-        start_pos = QPoint(self.original_pos.x(), self.original_pos.y() - 30)
+        # Set initial position for slide animation with DPI-aware offset
+        start_pos = QPoint(self.original_pos.x(), self.original_pos.y() - Config.dpi_scale(30))
         self.move(start_pos)
 
-        # Fade-in animation (ใช้ window opacity แทน graphics effect)
+        # Fade-in animation (using window opacity instead of graphics effect)
         self.fade_animation = QPropertyAnimation(self, b"windowOpacity")
-        self.fade_animation.setDuration(400)
+        self.fade_animation.setDuration(400)  # Duration in ms doesn't need DPI scaling
         self.fade_animation.setStartValue(0.0)
         self.fade_animation.setEndValue(1.0)
         self.fade_animation.setEasingCurve(QEasingCurve.Type.OutCubic)
 
         # Slide-in animation
         self.slide_animation = QPropertyAnimation(self, b"pos")
-        self.slide_animation.setDuration(400)
+        self.slide_animation.setDuration(400)  # Duration in ms doesn't need DPI scaling
         self.slide_animation.setStartValue(start_pos)
         self.slide_animation.setEndValue(self.original_pos)
         self.slide_animation.setEasingCurve(QEasingCurve.Type.OutCubic)
 
-        # Scale animation สำหรับเอฟเฟค "pop-in"
+        # Scale animation for "pop-in" effect
         self.scale_animation = QPropertyAnimation(self, b"size")
-        self.scale_animation.setDuration(400)
+        self.scale_animation.setDuration(400)  # Duration in ms doesn't need DPI scaling
 
-        # เริ่มจากขนาดเล็กกว่าเล็กน้อย
+        # Start slightly smaller
         start_size = QSize(int(self.width() * 0.95), int(self.height() * 0.95))
         end_size = self.size()
 
@@ -196,11 +238,11 @@ class TranslationOverlay(QWidget):
         self.scale_animation.setEndValue(end_size)
         self.scale_animation.setEasingCurve(QEasingCurve.Type.OutBack)
 
-        # เริ่มอนิเมชันพร้อมกัน
+        # Start all animations together
         QTimer.singleShot(50, self._start_animations)
 
     def _start_animations(self):
-        """เริ่มอนิเมชันทั้งหมด"""
+        """Start all animations"""
         self.fade_animation.start()
         self.slide_animation.start()
         self.scale_animation.start()
@@ -260,8 +302,6 @@ class TranslationOverlay(QWidget):
 
                 # Update the overlay header immediately
                 self._update_model_display(main_window.current_model)
-
-                print(f"[INFO] Changed model to: {selected_display_name} ({main_window.current_model})")
         else:
             # Fallback if main window not found
             SettingsDialog = get_settings_dialog()
@@ -289,8 +329,27 @@ class TranslationOverlay(QWidget):
                 self.is_dragging = True
                 self.drag_start_position = event.globalPosition().toPoint() - self.pos()
 
+    def _update_cursor(self, pos):
+        """Update cursor shape based on position"""
+        resize_edge = self._get_resize_edge(pos)
+        
+        if resize_edge == "top-left" or resize_edge == "bottom-right":
+            self.setCursor(Qt.CursorShape.SizeFDiagCursor)
+        elif resize_edge == "top-right" or resize_edge == "bottom-left":
+            self.setCursor(Qt.CursorShape.SizeBDiagCursor)
+        elif resize_edge == "top" or resize_edge == "bottom":
+            self.setCursor(Qt.CursorShape.SizeVerCursor)
+        elif resize_edge == "left" or resize_edge == "right":
+            self.setCursor(Qt.CursorShape.SizeHorCursor)
+        else:
+            self.setCursor(Qt.CursorShape.ArrowCursor)
+            
     def mouseMoveEvent(self, event):
         """Handle mouse move for dragging and resizing"""
+        # Always update cursor based on position
+        self._update_cursor(event.position().toPoint())
+        
+        # Handle resizing and dragging
         if self.is_resizing:
             self._perform_resize(event.globalPosition().toPoint())
         elif self.is_dragging and self.drag_start_position is not None:
@@ -359,9 +418,11 @@ class TranslationOverlay(QWidget):
         elif "bottom" in self.resize_edge:
             new_height = original_geometry.height() + diff.y()
 
-        # Apply size constraints
-        min_width, min_height = 500, 150
-        max_width, max_height = 1200, 1500
+        # Apply size constraints with DPI awareness
+        min_width = Config.dpi_scale(500)
+        min_height = Config.dpi_scale(150)
+        max_width = Config.dpi_scale(1200)
+        max_height = Config.dpi_scale(1500)
 
         # Get screen boundaries
         screen_rect = QApplication.primaryScreen().geometry()

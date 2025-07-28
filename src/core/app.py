@@ -11,6 +11,10 @@ class ScreenTranslatorApp:
     """Main application class"""
 
     def __init__(self):
+        # Note: In PyQt6 (Qt6), high DPI scaling is enabled by default
+        # The attributes AA_EnableHighDpiScaling and AA_UseHighDpiPixmaps from Qt5
+        # have been removed in Qt6
+        
         self.app = QApplication(sys.argv)
         self._setup_application()
         self._check_dependencies()

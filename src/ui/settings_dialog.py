@@ -1,9 +1,8 @@
 ﻿from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, 
-    QPushButton, QFrame, QSizePolicy
+    QPushButton, QFrame
 )
-from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QColor
+from PyQt6.QtCore import Qt
 
 from src.config import Config
 from src.utils import StyleManager
@@ -140,115 +139,73 @@ class SettingsDialog(QDialog):
         # Add stretch to push the controls to the right
         font_controls_layout.addStretch()
 
-        # Create a container for the font size display controls (right side)
+        # Create a container for the font size dropdown
         font_display_container = QHBoxLayout()
         font_display_container.setSpacing(8)
 
-        # Font size display (same style as model combo)
-        self.font_size_display = QLabel(f"{Config.DEFAULT_FONT_SIZE} px")
-        self.font_size_display.setStyleSheet("""
-            QLabel {
+        # Create font size dropdown
+        self.font_size_combo = QComboBox()
+        self.font_size_combo.setStyleSheet("""
+            QComboBox {
                 background-color: #45475a;
                 color: #cdd6f4;
                 font: 12px 'Segoe UI';
-                padding: 13px 6px;
+                padding: 8px;
                 border: none;
                 border-radius: 5px;
-                min-height: 16px;
-                max-height: 16px;
-                min-width: 50px;
+                min-width: 100px;
             }
-        """)
-        self.font_size_display.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        # Create up/down arrow buttons
-        self.font_size_up_btn = QPushButton("▲")
-        self.font_size_up_btn.setStyleSheet("""
-            QPushButton {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #89b4fa, stop:1 #74c7ec);
-                color: #1e1e2e;
-                font: bold 10px 'Segoe UI';
+            QComboBox::drop-down {
+                subcontrol-origin: padding;
+                subcontrol-position: top right;
+                width: 20px;
                 border: none;
-                border-radius: 3px;
-                min-width: 20px;
-                max-width: 20px;
-                min-height: 20px;
-                max-height: 20px;
             }
-            QPushButton:hover {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #a6d4ff, stop:1 #89b4fa);
+            QComboBox::down-arrow {
+                image: none;
+                width: 0;
             }
-            QPushButton:pressed {
-                background: #6fa8dc;
-            }
-        """)
-
-        self.font_size_down_btn = QPushButton("▼")
-        self.font_size_down_btn.setStyleSheet("""
-            QPushButton {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #74c7ec, stop:1 #89b4fa);
-                color: #1e1e2e;
-                font: bold 10px 'Segoe UI';
+            QComboBox QAbstractItemView {
+                background-color: #313244;
+                color: #cdd6f4;
                 border: none;
-                border-radius: 3px;
-                min-width: 20px;
-                max-width: 20px;
-                min-height: 20px;
-                max-height: 20px;
-            }
-            QPushButton:hover {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #89b4fa, stop:1 #a6d4ff);
-            }
-            QPushButton:pressed {
-                background: #6fa8dc;
+                selection-background-color: #89b4fa;
+                selection-color: #1e1e2e;
+                padding: 8px;
             }
         """)
-
-        # Connect button signals
+        
+        # Add font sizes from Config
+        for size in Config.FONT_SIZES:
+            self.font_size_combo.addItem(f"{size} px", size)
+            
+        # Find and select the current font size
+        current_size_index = 0
+        for i in range(self.font_size_combo.count()):
+            if self.font_size_combo.itemData(i) == Config.DEFAULT_FONT_SIZE:
+                current_size_index = i
+                break
+        self.font_size_combo.setCurrentIndex(current_size_index)
+        
+        # Connect signal
         # noinspection PyUnresolvedReferences
-        self.font_size_up_btn.clicked.connect(self._increase_font_size)
-        # noinspection PyUnresolvedReferences
-        self.font_size_down_btn.clicked.connect(self._decrease_font_size)
-
+        self.font_size_combo.currentIndexChanged.connect(self._font_size_changed)
+        
         # Store current font size
         self.current_font_size = Config.DEFAULT_FONT_SIZE
-
-        # Create vertical layout for arrow buttons
-        arrow_layout = QVBoxLayout()
-        arrow_layout.setSpacing(2)
-        arrow_layout.setContentsMargins(0, 0, 0, 0)
-        arrow_layout.addWidget(self.font_size_up_btn)
-        arrow_layout.addWidget(self.font_size_down_btn)
-
-        # Add font display and arrow buttons to the display container
-        font_display_container.addWidget(self.font_size_display)
-        font_display_container.addLayout(arrow_layout)
-
+        
+        # Add font size dropdown to the display container
+        font_display_container.addWidget(self.font_size_combo)
+        
         # Add the display container to the main layout
         font_controls_layout.addLayout(font_display_container)
 
         layout.addWidget(font_label)
         layout.addLayout(font_controls_layout)
 
-    def _increase_font_size(self):
-        """Increase font size"""
-        if self.current_font_size < 48:  # Max size
-            self.current_font_size += 1
-            self._update_font_display()
-
-    def _decrease_font_size(self):
-        """Decrease font size"""
-        if self.current_font_size > 8:  # Min size
-            self.current_font_size -= 1
-            self._update_font_display()
-
-    def _update_font_display(self):
-        """Update the font size display"""
-        self.font_size_display.setText(f"{self.current_font_size} px")
+    def _font_size_changed(self, index):
+        """Handle font size selection from dropdown"""
+        self.current_font_size = self.font_size_combo.itemData(index)
 
     def _setup_buttons(self, layout):
         """Setup dialog buttons"""

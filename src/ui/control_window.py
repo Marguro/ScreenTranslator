@@ -66,7 +66,11 @@ class ControlWindow(QMainWindow):
     def _setup_window(self):
         """Configure main window"""
         self.setWindowTitle("Screen Translator")
-        self.setFixedSize(Config.CONTROL_WINDOW_WIDTH, Config.CONTROL_WINDOW_HEIGHT)
+        # Use DPI-aware sizing
+        self.setFixedSize(
+            Config.dpi_scale(Config.CONTROL_WINDOW_WIDTH), 
+            Config.dpi_scale(Config.CONTROL_WINDOW_HEIGHT)
+        )
         self.setStyleSheet("QMainWindow { background-color: #1e1e2e; }")
 
     def _setup_ui(self):
@@ -75,8 +79,10 @@ class ControlWindow(QMainWindow):
         self.setCentralWidget(central_widget)
 
         layout = QVBoxLayout(central_widget)
-        layout.setContentsMargins(25, 25, 25, 25)
-        layout.setSpacing(20)
+        # Use DPI-aware margins and spacing
+        margin = Config.dpi_scale(25)
+        layout.setContentsMargins(margin, margin, margin, margin)
+        layout.setSpacing(Config.dpi_scale(20))
 
         self._setup_header(layout)
         self._setup_model_status(layout)
@@ -86,14 +92,14 @@ class ControlWindow(QMainWindow):
     def _setup_header(self, layout):
         """Setup window header"""
         header_layout = QVBoxLayout()
-        header_layout.setSpacing(5)
+        header_layout.setSpacing(Config.dpi_scale(5))
 
         title = QLabel("Screen Translator")
-        title.setStyleSheet("color: #89b4fa; font: bold 20px 'Segoe UI';")
+        title.setStyleSheet(f"color: #89b4fa; font: bold {Config.dpi_scale(20)}px 'Segoe UI';")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         subtitle = QLabel("OCR • Translation • AI")
-        subtitle.setStyleSheet("color: #cdd6f4; font: 13px 'Segoe UI';")
+        subtitle.setStyleSheet(f"color: #cdd6f4; font: {Config.dpi_scale(13)}px 'Segoe UI';")
         subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         header_layout.addWidget(title)
@@ -105,7 +111,7 @@ class ControlWindow(QMainWindow):
         # Current model display in single line
         current_display_name = self._get_current_model_display_name()
         self.current_model_name = QLabel(f"Current Model: {current_display_name}")
-        self.current_model_name.setStyleSheet("color: #72f9b5; font: 12px 'Segoe UI';")
+        self.current_model_name.setStyleSheet(f"color: #72f9b5; font: {Config.dpi_scale(12)}px 'Segoe UI';")
         self.current_model_name.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         layout.addWidget(self.current_model_name)
@@ -127,19 +133,23 @@ class ControlWindow(QMainWindow):
         """Setup action buttons"""
         capture_btn = QPushButton("📱 Capture Screen Area")
         capture_btn.setStyleSheet(StyleManager.get_button_style(
-            "#313244", "#45475a", padding="12px 20px", font_size=14
+            "#313244", "#45475a", 
+            padding=f"{Config.dpi_scale(12)}px {Config.dpi_scale(20)}px", 
+            font_size=Config.dpi_scale(14)
         ))
         # noinspection PyUnresolvedReferences
         capture_btn.clicked.connect(self.start_screen_selection)
-        capture_btn.setMinimumHeight(45)
+        capture_btn.setMinimumHeight(Config.dpi_scale(45))
 
         settings_btn = QPushButton("⚙️ Settings")
         settings_btn.setStyleSheet(StyleManager.get_button_style(
-            "#313244", "#45475a", padding="12px 20px", font_size=14
+            "#313244", "#45475a", 
+            padding=f"{Config.dpi_scale(12)}px {Config.dpi_scale(20)}px", 
+            font_size=Config.dpi_scale(14)
         ))
         # noinspection PyUnresolvedReferences
         settings_btn.clicked.connect(self.show_settings)
-        settings_btn.setMinimumHeight(45)
+        settings_btn.setMinimumHeight(Config.dpi_scale(45))
 
         layout.addWidget(capture_btn)
         layout.addWidget(settings_btn)
@@ -147,22 +157,22 @@ class ControlWindow(QMainWindow):
     def _setup_footer(self, layout):
         """Setup window footer"""
         info_label = QLabel("💡 Press Alt twice quickly to capture")
-        info_label.setStyleSheet("color: #6c7086; font: 12px 'Segoe UI';")
+        info_label.setStyleSheet(f"color: #6c7086; font: {Config.dpi_scale(12)}px 'Segoe UI';")
         info_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         separator = QFrame()
         separator.setFrameShape(QFrame.Shape.HLine)
-        separator.setStyleSheet("""
-            QFrame {
+        separator.setStyleSheet(f"""
+            QFrame {{
                 color: #45475a;
                 background-color: #45475a;
                 border: none;
-                max-height: 1px;
-            }
+                max-height: {Config.dpi_scale(1)}px;
+            }}
         """)
 
         version_label = QLabel("v1.0 • AI-Powered Translation")
-        version_label.setStyleSheet("color: #6c7086; font: 11px 'Segoe UI';")
+        version_label.setStyleSheet(f"color: #6c7086; font: {Config.dpi_scale(11)}px 'Segoe UI';")
         version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         layout.addWidget(info_label)
