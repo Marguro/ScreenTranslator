@@ -1,9 +1,8 @@
 ﻿from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, 
-    QPushButton, QFrame, QSizePolicy
+    QPushButton, QFrame
 )
-from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QColor
+from PyQt6.QtCore import Qt
 
 from src.config import Config
 from src.utils import StyleManager
