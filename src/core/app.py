@@ -3,7 +3,6 @@ import os
 import ollama
 from PyQt6.QtWidgets import QApplication, QMessageBox
 from PyQt6.QtGui import QPalette, QColor
-from PyQt6.QtCore import Qt, QCoreApplication
 
 from src.config import Config
 from src.ui.control_window import ControlWindow
