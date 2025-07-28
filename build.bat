@@ -6,9 +6,10 @@ if exist "dist\ScreenTranslator" rmdir /s /q "dist\ScreenTranslator"
 if exist "build" rmdir /s /q "build"
 
 REM Build with PyInstaller
-pyinstaller --noconfirm --clean ^
+pyinstaller --noconfirm --clean --optimize=1 ^
     --name="ScreenTranslator" ^
     --windowed ^
+    --onedir ^
     --hidden-import=PyQt6 ^
     --hidden-import=pytesseract ^
     --hidden-import=mss ^
@@ -17,12 +18,8 @@ pyinstaller --noconfirm --clean ^
     --hidden-import=ollama ^
     main.py
 
-REM Create _internal folder
-mkdir "dist\ScreenTranslator\_internal"
-
 REM Copy manual files to the root of the build directory
-copy "Manual\Manual.html" "dist\ScreenTranslator\"
-copy "Manual\คู่มือ.html" "dist\ScreenTranslator\"
+copy "Manual\*" "dist\ScreenTranslator\"
 
 echo Build completed successfully!
 echo The executable is located in dist\ScreenTranslator\ScreenTranslator.exe
