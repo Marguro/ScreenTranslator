@@ -2,6 +2,20 @@
 
 A real-time screen text translation application for Windows that uses OCR and AI technology to translate text accurately and quickly.
 
+## 📋 Table of Contents
+
+- [✨ Key Features](#-key-features)
+  - [🖱️ Intuitive Screen Capture](#️-intuitive-screen-capture)
+  - [🔍 Advanced OCR Processing](#-advanced-ocr-processing)
+  - [🤖 AI-Powered Translation](#-ai-powered-translation)
+  - [🎨 Modern User Interface](#-modern-user-interface)
+  - [📋 Productivity Features](#-productivity-features)
+- [🛠️ System Requirements](#️-system-requirements)
+- [📦 Installation](#-installation)
+- [🚀 Usage](#-usage)
+- [⚙️ Configuration](#️-configuration)
+- [🗂️ Project Structure](#️-project-structure)
+
 ## ✨ Key Features
 
 ### 🖱️ **Intuitive Screen Capture**
