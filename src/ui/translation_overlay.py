@@ -1,5 +1,4 @@
-﻿import pyperclip
-from PyQt6.QtWidgets import (
+﻿from PyQt6.QtWidgets import (
     QWidget, QApplication, QVBoxLayout, QHBoxLayout, QFrame, QLabel, 
     QPushButton, QTextEdit, QDialog, QSizePolicy
 )
@@ -250,9 +249,16 @@ class TranslationOverlay(QWidget):
     def update_text(self, text, current_model=None):
         """Update translation text and copy to clipboard"""
         self.translation_text.setPlainText(text)
-        pyperclip.copy(text)
-        self.copy_indicator.show_briefly()
-
+        try:
+            import pyperclip
+            pyperclip.copy(text)
+            self.copy_indicator.show_briefly()
+        except Exception as e:
+            print(f"[WARNING] Clipboard copy failed: {e}")
+            # Optionally, show a message to the user
+            if hasattr(self, 'copy_indicator'):
+                self.copy_indicator.setText("Clipboard unavailable!")
+                self.copy_indicator.show_briefly()
         # Update model display in header if provided
         if current_model:
             self._update_model_display(current_model)
