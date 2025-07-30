@@ -32,7 +32,7 @@ class ControlWindow(QMainWindow):
 
         # Initialize components
         self.ocr_processor = OCRProcessor()
-        self.keyboard_manager = KeyboardManager(self.start_screen_selection)
+        self.keyboard_manager = KeyboardManager(self.start_screen_selection, self)
 
         self._setup_window()
         self._setup_ui()
