@@ -1,5 +1,4 @@
 import os
-import pyperclip
 from PyQt6.QtWidgets import (
     QWidget, QApplication, QVBoxLayout, QHBoxLayout, QFrame, QLabel, 
     QPushButton, QTextEdit, QDialog, QSizePolicy
@@ -294,6 +293,12 @@ class TranslationOverlay(QWidget):
         if hasattr(self, 'title_label'):
             self.title_label.setText(f"Translation • {display_name}")
 
+    def refresh_font_size(self):
+        """Refresh the font size of the translation text area"""
+        if hasattr(self, 'translation_text'):
+            # Apply the updated style with new font size
+            self.translation_text.setStyleSheet(StyleManager.get_text_edit_style())
+
     def _show_settings(self):
         """Show settings dialog"""
         # Get the main window to access current model and settings
@@ -512,3 +517,4 @@ class TranslationOverlay(QWidget):
         new_height = max(min_height, new_height)
 
         self.setGeometry(new_x, new_y, new_width, new_height)
+
