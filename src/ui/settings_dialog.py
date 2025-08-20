@@ -17,6 +17,7 @@ class SettingsDialog(QDialog):
 
     def __init__(self, current_model, parent=None):
         super().__init__(parent)
+        self.font_size_display = None
         self.current_model = current_model
         self._setup_dialog()
         self._setup_ui()

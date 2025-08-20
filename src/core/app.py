@@ -2,7 +2,7 @@
 import os
 import ollama
 from PyQt6.QtWidgets import QApplication, QMessageBox
-from PyQt6.QtGui import QPalette, QColor
+from PyQt6.QtGui import QPalette, QColor, QIcon
 
 from src.config import Config
 from src.ui.control_window import ControlWindow
@@ -25,6 +25,9 @@ class ScreenTranslatorApp:
         self.app.setStyle('Fusion')
         self.app.setApplicationName("Screen Translator")
         self.app.setApplicationVersion("1.0")
+        # Set application icon
+        icon_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'icon', 'icon.png')
+        self.app.setWindowIcon(QIcon(icon_path))
         self._apply_dark_palette()
 
     def _apply_dark_palette(self):
