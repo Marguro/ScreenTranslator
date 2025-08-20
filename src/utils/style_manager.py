@@ -76,21 +76,24 @@
 
     @classmethod
     def get_text_edit_style(cls):
-        """Get text edit area style"""
-        return """
-            QTextEdit {
+        """Get text edit area style with configurable font size"""
+        from src.config import Config
+        font_size = Config.DEFAULT_FONT_SIZE
+
+        return f"""
+            QTextEdit {{
                 background: rgba(49, 50, 68, 0.6);
                 color: #cdd6f4;
-                font: 16px 'Segoe UI';
+                font: {font_size}px 'Segoe UI';
                 border: 1px solid rgba(137, 180, 250, 0.2);
                 border-radius: 10px;
                 padding: 12px;
                 selection-background-color: #89b4fa;
                 selection-color: #1e1e2e;
-            }
-            QTextEdit:focus {
+            }}
+            QTextEdit:focus {{
                 border: 1px solid rgba(137, 180, 250, 0.4);
-            }
+            }}
         """ + cls._get_scrollbar_style()
 
     @classmethod
