@@ -1,6 +1,6 @@
 ﻿from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, 
-    QPushButton, QFrame
+    QPushButton, QFrame, QApplication
 )
 from PyQt6.QtCore import Qt
 
@@ -207,6 +207,15 @@ class SettingsDialog(QDialog):
     def _font_size_changed(self, index):
         """Handle font size selection from dropdown"""
         self.current_font_size = self.font_size_combo.itemData(index)
+
+        # Update the Config immediately so new styles use the new font size
+        Config.DEFAULT_FONT_SIZE = self.current_font_size
+
+        # Find and update all existing translation overlays
+        from src.ui.translation_overlay import TranslationOverlay
+        for widget in QApplication.topLevelWidgets():
+            if isinstance(widget, TranslationOverlay):
+                widget.refresh_font_size()
 
     def _setup_buttons(self, layout):
         """Setup dialog buttons"""
