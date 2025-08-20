@@ -1,8 +1,11 @@
-﻿from PyQt6.QtWidgets import (
+import os
+import pyperclip
+from PyQt6.QtWidgets import (
     QWidget, QApplication, QVBoxLayout, QHBoxLayout, QFrame, QLabel, 
     QPushButton, QTextEdit, QDialog, QSizePolicy
 )
 from PyQt6.QtCore import Qt, QPoint, QSize, QTimer, QPropertyAnimation, QEasingCurve
+from PyQt6.QtGui import QIcon
 
 from src.config import Config
 from src.utils import StyleManager
@@ -34,10 +37,14 @@ class TranslationOverlay(QWidget):
         """Configure window properties"""
         self.setWindowFlags(
             Qt.WindowType.FramelessWindowHint |
-            Qt.WindowType.WindowStaysOnTopHint
+            Qt.WindowType.WindowStaysOnTopHint |
+            Qt.WindowType.Window
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        
+        # Set window assest for taskbar/title bar
+        icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'assest', 'icon.ico')
+        self.setWindowIcon(QIcon(icon_path))
+
         # Enable mouse tracking to receive mouse move events even when not pressed
         self.setMouseTracking(True)
 

@@ -1,8 +1,11 @@
 ﻿from PyQt6.QtWidgets import (
-    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
+    QMainWindow, QWidget, QVBoxLayout,
     QPushButton, QLabel, QFrame, QDialog, QApplication
 )
 from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtGui import QIcon
+import os
+import sys
 
 from src.config import Config
 from src.utils.style_manager import StyleManager
@@ -29,6 +32,13 @@ class ControlWindow(QMainWindow):
         self.translation_overlay = None
         self.screen_selector = None
         self.translation_worker = None
+
+        # Set window icon (handle PyInstaller bundle)
+        if hasattr(sys, '_MEIPASS'):
+            icon_path = os.path.join(sys._MEIPASS, 'assest', 'icon.ico')
+        else:
+            icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'assest', 'icon.ico')
+        self.setWindowIcon(QIcon(icon_path))
 
         # Initialize components
         self.ocr_processor = OCRProcessor()
@@ -66,6 +76,7 @@ class ControlWindow(QMainWindow):
     def _setup_window(self):
         """Configure main window"""
         self.setWindowTitle("Screen Translator")
+        # Remove duplicate icon setting - already set in __init__
         # Use DPI-aware sizing
         self.setFixedSize(
             Config.dpi_scale(Config.CONTROL_WINDOW_WIDTH), 
@@ -171,7 +182,7 @@ class ControlWindow(QMainWindow):
             }}
         """)
 
-        version_label = QLabel("v1.0 • AI-Powered Translation")
+        version_label = QLabel("v1.2 • AI-Powered Translation")
         version_label.setStyleSheet(f"color: #6c7086; font: {Config.dpi_scale(11)}px 'Segoe UI';")
         version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
