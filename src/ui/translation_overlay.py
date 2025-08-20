@@ -41,8 +41,8 @@ class TranslationOverlay(QWidget):
             Qt.WindowType.Window
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        # Set window icon for taskbar/title bar
-        icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'icon', 'icon.png')
+        # Set window assest for taskbar/title bar
+        icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'assest', 'icon.ico')
         self.setWindowIcon(QIcon(icon_path))
 
         # Enable mouse tracking to receive mouse move events even when not pressed

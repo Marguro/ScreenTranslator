@@ -25,8 +25,11 @@ class ScreenTranslatorApp:
         self.app.setStyle('Fusion')
         self.app.setApplicationName("Screen Translator")
         self.app.setApplicationVersion("1.0")
-        # Set application icon
-        icon_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'icon', 'icon.png')
+        # Set application icon (handle PyInstaller bundle)
+        if hasattr(sys, '_MEIPASS'):
+            icon_path = os.path.join(sys._MEIPASS, 'assest', 'icon.ico')
+        else:
+            icon_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assest', 'icon.ico')
         self.app.setWindowIcon(QIcon(icon_path))
         self._apply_dark_palette()
 

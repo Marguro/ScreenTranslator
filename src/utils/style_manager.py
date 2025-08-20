@@ -36,7 +36,7 @@
 
     @classmethod
     def get_icon_button_style(cls, color_key, size='24px', padding='4px'):
-        """Generate icon button styles"""
+        """Generate assest button styles"""
         base_color = cls.COLORS[color_key]
         return f"""
             QPushButton {{
