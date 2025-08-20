@@ -32,27 +32,14 @@ echo Creating Desktop Shortcut...
 REM Create temporary VBScript file
 (
 echo Set oWS = WScript.CreateObject^("WScript.Shell"^)
-echo Set oFSO = CreateObject^("Scripting.FileSystemObject"^)
 echo sDesktop = oWS.SpecialFolders^("Desktop"^)
 echo sLinkFile = sDesktop ^& "\Screen Translator.lnk"
-echo.
-echo ' Delete existing shortcut if it exists
-echo If oFSO.FileExists^(sLinkFile^) Then
-echo     oFSO.DeleteFile sLinkFile
-echo End If
-echo.
 echo Set oLink = oWS.CreateShortcut^(sLinkFile^)
-echo sCurrentDir = oFSO.GetAbsolutePathName^("."^)
-echo oLink.TargetPath = sCurrentDir ^& "\dist\ScreenTranslator\ScreenTranslator.exe"
-echo oLink.WorkingDirectory = sCurrentDir ^& "\dist\ScreenTranslator"
-echo oLink.IconLocation = sCurrentDir ^& "\dist\ScreenTranslator\_internal\assest\icon.ico,0"
+echo oLink.TargetPath = "%~dp0dist\ScreenTranslator\ScreenTranslator.exe"
+echo oLink.WorkingDirectory = "%~dp0dist\ScreenTranslator"
+echo oLink.IconLocation = "%~dp0dist\ScreenTranslator\_internal\assest\icon.ico"
 echo oLink.Description = "AI-Powered Screen Translation Tool"
 echo oLink.Save
-echo.
-echo ' Force refresh desktop
-echo oWS.SendKeys "%%{F4}"
-echo WScript.Sleep 100
-echo oWS.SendKeys "{F5}"
 ) > CreateShortcut.vbs
 
 REM Run VBScript to create shortcut

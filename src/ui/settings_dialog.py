@@ -124,7 +124,7 @@ class SettingsDialog(QDialog):
         font_controls_layout = QHBoxLayout()
         font_controls_layout.setSpacing(10)
 
-        # Font size label with icon - positioned on the left
+        # Font size label with assest - positioned on the left
         size_label = QLabel("Size:")
         size_label.setStyleSheet("""
             QLabel {

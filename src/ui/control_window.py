@@ -5,6 +5,7 @@
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QIcon
 import os
+import sys
 
 from src.config import Config
 from src.utils.style_manager import StyleManager
@@ -31,6 +32,13 @@ class ControlWindow(QMainWindow):
         self.translation_overlay = None
         self.screen_selector = None
         self.translation_worker = None
+
+        # Set window icon (handle PyInstaller bundle)
+        if hasattr(sys, '_MEIPASS'):
+            icon_path = os.path.join(sys._MEIPASS, 'assest', 'icon.ico')
+        else:
+            icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'assest', 'icon.ico')
+        self.setWindowIcon(QIcon(icon_path))
 
         # Initialize components
         self.ocr_processor = OCRProcessor()
@@ -68,8 +76,7 @@ class ControlWindow(QMainWindow):
     def _setup_window(self):
         """Configure main window"""
         self.setWindowTitle("Screen Translator")
-        icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'icon', 'icon.png')
-        self.setWindowIcon(QIcon(icon_path))
+        # Remove duplicate icon setting - already set in __init__
         # Use DPI-aware sizing
         self.setFixedSize(
             Config.dpi_scale(Config.CONTROL_WINDOW_WIDTH), 
